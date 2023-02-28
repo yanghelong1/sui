@@ -150,11 +150,11 @@ function TokenView({ data }: { data: DataType }) {
                 {viewedData.url && (
                     <div className={styles.displaycontainer}>
                         <ObjectDetails
-                            image={viewedData.url}
+                            image={url}
                             name={name || trimStdLibPrefix(viewedData.objType)}
                             type={fileType!}
                             variant="large"
-                            nsfw={!allowed}
+                            nsfw={nsfw}
                         />
                     </div>
                 )}
