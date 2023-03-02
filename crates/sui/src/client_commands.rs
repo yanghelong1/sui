@@ -19,7 +19,6 @@ use fastcrypto::{
     encoding::{Base64, Encoding},
     traits::ToFromBytes,
 };
-use move_cli::base;
 use move_core_types::language_storage::TypeTag;
 use move_package::BuildConfig as MoveBuildConfig;
 use prettytable::Table;
@@ -27,6 +26,7 @@ use prettytable::{row, table};
 use serde::Serialize;
 use serde_json::{json, Value};
 use sui_framework::build_move_package;
+use sui_move::build::{resolve_lock_file_path, SuiPackageHooks};
 use sui_source_validation::{BytecodeSourceVerifier, SourceMode};
 use sui_types::error::SuiError;
 
@@ -455,6 +455,7 @@ impl SuiClientCommands {
         self,
         context: &mut WalletContext,
     ) -> Result<SuiClientCommandResult, anyhow::Error> {
+        move_package::package_hooks::register_package_hooks(Box::new(SuiPackageHooks {}));
         let ret = Ok(match self {
             SuiClientCommands::Publish {
                 package_path,
@@ -467,7 +468,8 @@ impl SuiClientCommands {
                 let sender = context.try_get_object_owner(&gas).await?;
                 let sender = sender.unwrap_or(context.active_address()?);
 
-                let build_config = resolve_lock_file_path(build_config, package_path.clone())?;
+                let build_config =
+                    resolve_lock_file_path(build_config, Some(package_path.clone()))?;
 
                 let compiled_package = build_move_package(
                     &package_path,
@@ -1007,7 +1009,8 @@ impl SuiClientCommands {
                     ));
                 }
 
-                let build_config = resolve_lock_file_path(build_config, package_path.clone())?;
+                let build_config =
+                    resolve_lock_file_path(build_config, Some(package_path.clone()))?;
 
                 let compiled_package = build_move_package(
                     &package_path,
@@ -1044,18 +1047,6 @@ impl SuiClientCommands {
         config.active_env = env;
         Ok(())
     }
-}
-
-/// Resolve Move.lock file path in package directory (where Move.toml is).
-fn resolve_lock_file_path(
-    build_config: MoveBuildConfig,
-    package_path: PathBuf,
-) -> Result<MoveBuildConfig, anyhow::Error> {
-    let package_root = base::reroot_path(Some(package_path))?;
-    let lock_file_path = package_root.join("Move.lock");
-    let mut build_config = build_config;
-    build_config.lock_file = Some(lock_file_path);
-    Ok(build_config)
 }
 
 pub struct WalletContext {
