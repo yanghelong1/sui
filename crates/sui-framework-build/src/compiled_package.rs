@@ -30,9 +30,10 @@ use move_package::{
     compilation::{
         build_plan::BuildPlan, compiled_package::CompiledPackage as MoveCompiledPackage,
     },
-    resolution::resolution_graph::ResolvedGraph,
+    resolution::resolution_graph::{Package, ResolvedGraph},
     BuildConfig as MoveBuildConfig,
 };
+use move_symbol_pool::Symbol;
 use serde_reflection::Registry;
 use sui_types::{
     error::{SuiError, SuiResult},
@@ -124,12 +125,27 @@ impl BuildConfig {
     /// If we are building the Sui framework, we skip the check that the addresses should be 0
     pub fn build(self, path: PathBuf) -> SuiResult<CompiledPackage> {
         let res = if self.print_diags_to_stderr {
+            println!("5.");
             let resolution_graph = self
                 .config
                 .resolution_graph_for_package(&path, &mut std::io::stderr())
                 .map_err(|err| SuiError::ModuleBuildFailure {
                     error: format!("{:?}", err),
                 })?;
+            // let transitive = resolution_graph.clone().graph.always_deps;
+            // dbg!(transitive);
+            let manifests = resolution_graph
+                .clone()
+                .package_table
+                .iter()
+                .map(|(_, p)| p.source_package.package.custom_properties.clone())
+                .collect::<Vec<_>>();
+            let key = Symbol::from("published-at");
+            let published_at = manifests
+                .iter()
+                .filter_map(|t| t.get(&key))
+                .collect::<Vec<_>>();
+            dbg!(published_at);
             Self::compile_package(resolution_graph, &mut std::io::stderr())
         } else {
             let resolution_graph = self

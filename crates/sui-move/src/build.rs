@@ -3,9 +3,11 @@
 
 use clap::Parser;
 use move_cli::base::{self, build};
-use move_package::BuildConfig as MoveBuildConfig;
+use move_package::{package_hooks::PackageHooks, source_package::parsed_manifest::CustomDepInfo};
+use move_package::{source_package::manifest_parser, BuildConfig as MoveBuildConfig};
 use serde_json::json;
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -40,10 +42,8 @@ impl Build {
         path: Option<PathBuf>,
         build_config: MoveBuildConfig,
     ) -> anyhow::Result<()> {
-        let rerooted_path = base::reroot_path(path)?;
-        let lock_file_path = rerooted_path.join("Move.lock");
-        let mut build_config = build_config;
-        build_config.lock_file = Some(lock_file_path);
+        let rerooted_path = base::reroot_path(path.clone())?;
+        let build_config = resolve_lock_file_path(build_config, path)?;
         Self::execute_internal(
             &rerooted_path,
             build_config,
@@ -85,4 +85,51 @@ impl Build {
 
         Ok(())
     }
+}
+
+/// Resolve Move.lock file path in package directory (where Move.toml is).
+pub fn resolve_lock_file_path(
+    build_config: MoveBuildConfig,
+    package_path: Option<PathBuf>,
+) -> Result<MoveBuildConfig, anyhow::Error> {
+    let package_root = base::reroot_path(package_path)?;
+    let lock_file_path = package_root.join("Move.lock");
+    let mut build_config = build_config;
+    build_config.lock_file = Some(lock_file_path);
+    Ok(build_config)
+}
+
+pub const PUBLISHED_AT_MANIFEST_FIELD: &str = "published-at";
+
+pub struct SuiPackageHooks {}
+
+impl PackageHooks for SuiPackageHooks {
+    fn custom_package_info_fields(&self) -> Vec<String> {
+        vec![PUBLISHED_AT_MANIFEST_FIELD.to_string()]
+    }
+
+    fn custom_dependency_key(&self) -> Option<String> {
+        None
+    }
+
+    fn resolve_custom_dependency(
+        &self,
+        _dep_name: move_symbol_pool::Symbol,
+        _info: &CustomDepInfo,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
+pub fn manifest_custom_properties(
+    package_path: Option<PathBuf>,
+) -> anyhow::Result<BTreeMap<String, String>> {
+    let package_root = base::reroot_path(package_path)?;
+    let manifest = manifest_parser::parse_move_manifest_from_file(&package_root)?;
+    Ok(manifest
+        .package
+        .custom_properties
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect())
 }
