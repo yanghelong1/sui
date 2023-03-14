@@ -266,9 +266,8 @@ impl ConsensusAdapter {
                 let position = self.submission_position(committee, tx_digest);
                 // DELAY_STEP is chosen as 1.5 * mean consensus delay
                 const DELAY_STEP: Duration = Duration::from_secs(7);
-                const MAX_DELAY_MUL: usize = 10;
                 (
-                    DELAY_STEP * std::cmp::min(position, MAX_DELAY_MUL) as u32,
+                    DELAY_STEP * position as u32,
                     position,
                 )
             }
