@@ -16,7 +16,7 @@ use std::convert::TryInto;
 
 use futures::{Future, StreamExt};
 
-use mysten_metrics::spawn_logged_monitored_task;
+use mysten_metrics::{monitored_scope, spawn_logged_monitored_task};
 use std::sync::Arc;
 use tokio::{
     task::JoinHandle,
@@ -272,10 +272,12 @@ impl BatchMaker {
             // Now save it to disk
             let digest = batch.digest();
 
+            let scope = monitored_scope("batch_insert_batch_maker");
             if let Err(e) = store.insert(&digest, &batch) {
                 error!("Store failed with error: {:?}", e);
                 return;
             }
+            drop(scope);
 
             // Also wait for sending to be done here
             //
