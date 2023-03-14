@@ -20,7 +20,7 @@ use types::{
     WorkerSynchronizeMessage, WorkerToWorker, WorkerToWorkerClient,
 };
 
-use mysten_metrics::monitored_future;
+use mysten_metrics::{monitored_future, monitored_scope};
 
 use crate::TransactionValidator;
 
@@ -52,9 +52,11 @@ impl<V: TransactionValidator> WorkerToWorker for WorkerReceiverHandler<V> {
             ));
         }
         let digest = message.batch.digest();
+        let scope = monitored_scope("batch_insert_report_batch");
         self.store.insert(&digest, &message.batch).map_err(|e| {
             anemo::rpc::Status::internal(format!("failed to write to batch store: {e:?}"))
         })?;
+        drop(scope);
         self.tx_others_batch
             .send(WorkerOthersBatchMessage {
                 digest,
@@ -71,9 +73,11 @@ impl<V: TransactionValidator> WorkerToWorker for WorkerReceiverHandler<V> {
     ) -> Result<anemo::Response<RequestBatchResponse>, anemo::rpc::Status> {
         // TODO [issue #7]: Do some accounting to prevent bad actors from monopolizing our resources
         let batch = request.into_body().batch;
+        let scope = monitored_scope("batch_get_request_batch");
         let batch = self.store.get(&batch).map_err(|e| {
             anemo::rpc::Status::internal(format!("failed to read from batch store: {e:?}"))
         })?;
+        drop(scope);
 
         Ok(anemo::Response::new(RequestBatchResponse { batch }))
     }
@@ -110,6 +114,7 @@ impl<V: TransactionValidator> PrimaryToWorker for PrimaryReceiverHandler<V> {
         let mut missing = HashSet::new();
         for digest in message.digests.iter() {
             // Check if we already have the batch.
+            let _scope = monitored_scope("batch_get_synchronize");
             match self.store.get(digest) {
                 Ok(None) => {
                     missing.insert(*digest);
@@ -230,6 +235,7 @@ impl<V: TransactionValidator> PrimaryToWorker for PrimaryReceiverHandler<V> {
                             }
                             let digest = batch.digest();
                             if missing.remove(&digest) {
+                                let _scope = monitored_scope("batch_insert_synchronize");
                                 self.store.insert(&digest, &batch).map_err(|e| {
                                     anemo::rpc::Status::internal(format!(
                                         "failed to write to batch store: {e:?}"
@@ -261,6 +267,7 @@ impl<V: TransactionValidator> PrimaryToWorker for PrimaryReceiverHandler<V> {
         request: anemo::Request<WorkerDeleteBatchesMessage>,
     ) -> Result<anemo::Response<()>, anemo::rpc::Status> {
         for digest in request.into_body().digests {
+            let _scope = monitored_scope("batch_remove_delete_batches");
             self.store.remove(&digest).map_err(|e| {
                 anemo::rpc::Status::internal(format!("failed to remove from batch store: {e:?}"))
             })?;
