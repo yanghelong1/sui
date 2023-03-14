@@ -29,6 +29,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use sui_types::base_types::TransactionDigest;
 use sui_types::committee::Committee;
+use sui_types::crypto::AuthorityPublicKeyBytes;
 use sui_types::{
     error::{SuiError, SuiResult},
     messages::ConsensusTransaction,
@@ -259,18 +260,22 @@ impl ConsensusAdapter {
         &self,
         committee: &Committee,
         transaction: &ConsensusTransaction,
-    ) -> (impl Future<Output = ()>, usize) {
-        let (duration, position) = match &transaction.kind {
+    ) -> (
+        impl Future<Output = ()>,
+        Vec<AuthorityPublicKeyBytes>,
+        usize,
+    ) {
+        let (duration, sequence, position) = match &transaction.kind {
             ConsensusTransactionKind::UserTransaction(certificate) => {
                 let tx_digest = certificate.digest();
-                let position = self.submission_position(committee, tx_digest);
+                let (sequence, position) = self.submission_position(committee, tx_digest);
                 // DELAY_STEP is chosen as 1.5 * mean consensus delay
                 const DELAY_STEP: Duration = Duration::from_secs(7);
-                (DELAY_STEP * position as u32, position)
+                (DELAY_STEP * position as u32, sequence, position)
             }
-            _ => (Duration::ZERO, 0),
+            _ => (Duration::ZERO, vec![], 0),
         };
-        (tokio::time::sleep(duration), position)
+        (tokio::time::sleep(duration), sequence, position)
     }
 
     /// Check when this authority should submit the certificate to consensus.
@@ -280,10 +285,14 @@ impl ConsensusAdapter {
     /// when system operates normally.
     ///
     /// The function returns the position of this authority when it is their turn to submit the transaction to consensus.
-    fn submission_position(&self, committee: &Committee, tx_digest: &TransactionDigest) -> usize {
-        let positions = order_validators_for_submission(committee, tx_digest);
-
-        self.check_submission_wrt_connectivity(positions)
+    fn submission_position(
+        &self,
+        committee: &Committee,
+        tx_digest: &TransactionDigest,
+    ) -> (Vec<AuthorityPublicKeyBytes>, usize) {
+        let sequence = order_validators_for_submission(committee, tx_digest);
+        let position = self.check_submission_wrt_connectivity(&sequence);
+        (sequence, position)
     }
 
     /// This function runs the following algorithm to decide whether or not to submit a transaction
@@ -305,11 +314,11 @@ impl ConsensusAdapter {
     /// Recursively, if the authority further ahead of us in the positions is a low performing authority, we will
     /// move our positions up one, and submit at the same time. This allows low performing
     /// node a chance to participate in consensus and redeem their scores while maintaining performance.
-    fn check_submission_wrt_connectivity(&self, positions: Vec<AuthorityName>) -> usize {
-        let filtered_positions = positions
-            .into_iter()
+    fn check_submission_wrt_connectivity(&self, positions: &[AuthorityName]) -> usize {
+        let filtered_positions: Vec<_> = positions
+            .iter()
             .filter(|authority| {
-                self.authority == *authority
+                self.authority == **authority
                     || self
                         .connection_monitor_status
                         .check_connection(&self.authority, authority)
@@ -318,7 +327,7 @@ impl ConsensusAdapter {
             })
             .collect();
 
-        get_position_in_list(self.authority, filtered_positions)
+        get_position_in_list(self.authority, &filtered_positions)
     }
 
     /// This method blocks until transaction is persisted in local database
@@ -390,7 +399,7 @@ impl ConsensusAdapter {
             .consensus_message_processed_notify(transaction_key)
             .boxed();
 
-        let (await_submit, position) =
+        let (await_submit, sequence, position) =
             self.await_submit_delay(epoch_store.committee(), &transaction);
         let mut guard = InflightDropGuard::acquire(&self);
 
@@ -420,6 +429,13 @@ impl ConsensusAdapter {
             // populate the position only when this authority submits the transaction
             // to consensus
             guard.position = Some(position);
+            if position > 10 {
+                let prev: Vec<_> = sequence.iter().take(position).collect();
+                warn!(
+                    "Submitting at a late position {position}. Previous submitters: {:?}",
+                    prev
+                );
+            }
 
             // We enter this branch when in select above await_submit completed and processed_waiter is pending
             // This means it is time for us to submit transaction to consensus
@@ -570,11 +586,11 @@ impl CheckConnection for ConnectionMonitorStatusForTests {
 
 pub fn get_position_in_list(
     search_authority: AuthorityName,
-    positions: Vec<AuthorityName>,
+    positions: &[&AuthorityName],
 ) -> usize {
     positions
-        .into_iter()
-        .find_position(|authority| *authority == search_authority)
+        .iter()
+        .find_position(|authority| ***authority == search_authority)
         .expect("Couldn't find ourselves in shuffled committee")
         .0
 }
@@ -707,7 +723,7 @@ pub fn position_submit_certificate(
     tx_digest: &TransactionDigest,
 ) -> usize {
     let validators = order_validators_for_submission(committee, tx_digest);
-    get_position_in_list(*ourselves, validators)
+    get_position_in_list(*ourselves, &validators.iter().collect::<Vec<_>>())
 }
 
 #[cfg(test)]
