@@ -58,7 +58,7 @@ export function Image({
     size,
     ...imgProps
 }: ImageProps) {
-    const { status, nsfw } = useImage(src, moderate);
+    const { status, nsfw } = useImage({ src, moderate });
     return (
         <div
             className={cx(

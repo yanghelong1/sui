@@ -14,7 +14,10 @@ interface UseImageProps {
 export function useImage({ src, moderate = false }: UseImageProps) {
     const [status, setStatus] = useState<Status>('loading');
     const formatted = src.replace(/^ipfs:\/\//, 'https://ipfs.io/ipfs/');
-    const { data: allowed, isFetched } = useImageMod({ url: formatted });
+    const { data: allowed, isFetched } = useImageMod({
+        url: formatted,
+        enabled: moderate,
+    });
     const ref = useRef<HTMLImageElement | null>(null);
 
     useEffect(() => {
@@ -23,7 +26,7 @@ export function useImage({ src, moderate = false }: UseImageProps) {
         img.src = src;
         img.onload = () => !moderate && setStatus('loaded');
         img.onerror = () => setStatus('failed');
-    });
+    }, [src, moderate]);
 
     useEffect(() => {
         if (moderate && isFetched) setStatus('loaded');

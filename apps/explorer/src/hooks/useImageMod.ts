@@ -28,9 +28,9 @@ export function useImageMod({
         },
         {
             enabled: !!url && enabled,
-            placeholderData: undefined,
-            staleTime: 0,
-            cacheTime: 0,
+            placeholderData: false,
+            staleTime: Infinity,
+            cacheTime: Infinity,
         }
     );
 }

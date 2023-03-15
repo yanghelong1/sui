@@ -3,23 +3,16 @@
 
 import { type Data, type DataType } from '../OwnedObjectConstants';
 
-import { useImage } from '~/hooks/useImage';
 import { ObjectDetails } from '~/ui/ObjectDetails';
 
 function OwnedNFT(entryObj: Data) {
-    const { url, nsfw } = useImage({
-        src: entryObj.display ?? '',
-        moderate: true,
-    });
-
     return (
         <ObjectDetails
             id={entryObj.id}
-            name={entryObj.name}
+            name={entryObj.name ?? ''}
             type={entryObj.name ?? entryObj.Type}
-            image={url}
+            image={entryObj.display ?? ''}
             variant="small"
-            nsfw={nsfw}
         />
     );
 }
