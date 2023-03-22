@@ -142,7 +142,12 @@ export function StakeCard({
         : StakeState.WARM_UP;
 
     const rewards = isEarnedRewards && estimatedReward ? estimatedReward : 0;
-    const [principalStaked, symbol] = useFormatCoin(principal, SUI_TYPE_ARG);
+
+    // For inactive validator, show principal + rewards
+    const [principalStaked, symbol] = useFormatCoin(
+        inactiveValidator ? principal + rewards : principal,
+        SUI_TYPE_ARG
+    );
     const [rewardsStaked] = useFormatCoin(rewards, SUI_TYPE_ARG);
     const isEarning = delegationState === StakeState.EARNING && rewards > 0;
 
