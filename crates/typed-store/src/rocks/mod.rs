@@ -1859,7 +1859,7 @@ pub fn base_db_options() -> DBOptions {
         opt.set_max_open_files((limit / 8) as i32);
     }
 
-    let row_cache = rocksdb::Cache::new_lru_cache(300_000).expect("Cache is ok");
+    let row_cache = rocksdb::Cache::new_lru_cache(30_000_000).expect("Cache is ok");
     opt.set_row_cache(&row_cache);
 
     // The table cache is locked for updates and this determines the number
