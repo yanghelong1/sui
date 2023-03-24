@@ -2,36 +2,47 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useFeature, useGrowthBook } from '@growthbook/growthbook-react';
-import { Navigate } from 'react-router-dom';
+import { useRpcClient } from '@mysten/core';
+import { useQuery } from '@tanstack/react-query';
+import { Navigate, useParams } from 'react-router-dom';
 
 import { validatorsTableData } from '../validators/Validators';
-import { getMockEpochData, mockCheckpointsTable } from './mocks';
-import { EpochStats } from './stats/EpochStats';
+// import { EpochStats } from './stats/EpochStats';
 
-import { SuiAmount } from '~/components/transactions/TxCardUtils';
-import { useGetSystemObject } from '~/hooks/useGetObject';
-import { useGetValidatorsEvents } from '~/hooks/useGetValidatorsEvents';
-import { EpochProgress } from '~/pages/epochs/stats/EpochProgress';
+// import { SuiAmount } from '~/components/transactions/TxCardUtils';
+
+// import { EpochProgress } from '~/pages/epochs/stats/EpochProgress';
 import { Banner } from '~/ui/Banner';
 import { Card } from '~/ui/Card';
 import { LoadingSpinner } from '~/ui/LoadingSpinner';
 import { RingChart } from '~/ui/RingChart';
-import { Stats } from '~/ui/Stats';
+// import { Stats } from '~/ui/Stats';
 import { TableCard } from '~/ui/TableCard';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '~/ui/Tabs';
 import { GROWTHBOOK_FEATURES } from '~/utils/growthbook';
+import { useGetValidatorsEvents } from '~/hooks/useGetValidatorsEvents';
+import { EpochProgress } from './stats/EpochProgress';
+import { EpochStats } from './stats/EpochStats';
+import { Stats } from '~/ui/Stats';
+import { SuiAmount } from '~/components/transactions/TxCardUtils';
+import { CheckpointsTable } from '../checkpoints/CheckpointsTable';
 
 function EpochDetail() {
-    const { endTimestamp, gasCostSummary, totalRewards, storageFundEarnings } =
-        getMockEpochData();
+    const { id } = useParams();
+    const rpc = useRpcClient();
+    const { data, isLoading, isError } = useQuery(
+        ['epoch', id],
+        async () => await rpc.getEpochs({ cursor: +id! - 1, limit: 1 })
+    );
 
-    const { data, isError, isLoading } = useGetSystemObject();
+    const [epochData] = data?.data ?? [];
+    const isCurrentEpoch = !epochData?.endOfEpochInfo;
 
-    const { data: validatorEvents, isLoading: validatorsEventsLoading } =
-        useGetValidatorsEvents({
-            limit: data?.activeValidators.length || 0,
-            order: 'descending',
-        });
+    // const { data: validatorEvents, isLoading: validatorsEventsLoading } =
+    //     useGetValidatorsEvents({
+    //         limit: epochData.validators.length || 0,
+    //         order: 'descending',
+    //     });
 
     if (isError)
         return (
@@ -40,50 +51,68 @@ function EpochDetail() {
             </Banner>
         );
 
-    if (isLoading || validatorsEventsLoading) return <LoadingSpinner />;
-    if (!data || !validatorEvents) return null;
+    if (isLoading) return <LoadingSpinner />;
+    if (!data) return null;
 
-    const validatorsTable = validatorsTableData(data, validatorEvents.data);
+    // const validatorsTable = validatorsTableData(data, validatorEvents.data);
 
     return (
         <div className="flex flex-col space-y-16">
             <div className="grid grid-flow-row gap-4 sm:gap-2 md:flex md:gap-6">
                 <EpochProgress
-                    epoch={data.epoch}
-                    inProgress
-                    start={data.epochStartTimestampMs ?? 0}
-                    end={endTimestamp}
+                    epoch={epochData?.epoch}
+                    inProgress={isCurrentEpoch}
+                    start={epochData?.epochStartTimestamp}
+                    end={epochData?.endOfEpochInfo?.epochEndTimestamp}
                 />
+
                 <EpochStats label="Activity">
                     <Stats label="Gas Revenue" tooltip="Gas Revenue">
-                        <SuiAmount amount={gasCostSummary?.gasRevenue} />
+                        <SuiAmount
+                            amount={epochData.endOfEpochInfo?.totalGasFees}
+                        />
                     </Stats>
                     <Stats label="Storage Revenue" tooltip="Storage Revenue">
-                        <SuiAmount amount={gasCostSummary?.storageRevenue} />
+                        <SuiAmount
+                            amount={epochData?.endOfEpochInfo?.storageCharge}
+                        />
                     </Stats>
                     <Stats label="Stake Rewards" tooltip="Stake Rewards">
-                        <SuiAmount amount={gasCostSummary?.stakeRewards} />
+                        <SuiAmount
+                            amount={
+                                epochData?.endOfEpochInfo
+                                    ?.totalStakeRewardsDistributed
+                            }
+                        />
                     </Stats>
                 </EpochStats>
+
                 <EpochStats label="Rewards">
                     <Stats label="Stake Subsidies" tooltip="Stake Subsidies">
                         <SuiAmount
-                            amount={data.stakeSubsidyCurrentDistributionAmount}
+                            amount={
+                                epochData?.endOfEpochInfo?.stakeSubsidyAmount
+                            }
                         />
                     </Stats>
                     <Stats label="Total Rewards" tooltip="Total Rewards">
-                        <SuiAmount amount={totalRewards} />
+                        <SuiAmount
+                            amount={
+                                epochData?.endOfEpochInfo
+                                    ?.totalStakeRewardsDistributed
+                            }
+                        />
                     </Stats>
 
                     <Stats
                         label="Storage Fund Earnings"
                         tooltip="Storage Fund Earnings"
                     >
-                        <SuiAmount amount={storageFundEarnings} />
+                        {/* <SuiAmount amount={epochData?.endOfEpochInfo.} /> */}
                     </Stats>
                 </EpochStats>
                 <Card spacing="lg">
-                    <RingChart
+                    {/* <RingChart
                         title="Validators in Next Epoch"
                         suffix="validators"
                         data={[
@@ -103,7 +132,7 @@ function EpochDetail() {
                                 color: '#FF794B',
                             },
                         ]}
-                    />
+                    /> */}
                 </Card>
             </div>
 
@@ -114,20 +143,20 @@ function EpochDetail() {
                 </TabList>
                 <TabPanels className="mt-4">
                     <TabPanel>
-                        <TableCard
-                            data={mockCheckpointsTable.data}
-                            columns={mockCheckpointsTable.columns}
+                        <CheckpointsTable
+                            initialCursor={epochData.firstCheckpointId}
+                            initialLimit={20}
                         />
                     </TabPanel>
                     <TabPanel>
-                        {validatorsTable ? (
+                        {/* {validatorsTable ? (
                             <TableCard
                                 data={validatorsTable?.data!}
                                 sortTable
                                 defaultSorting={[{ id: 'stake', desc: false }]}
                                 columns={validatorsTable?.columns!}
                             />
-                        ) : null}
+                        ) : null} */}
                     </TabPanel>
                 </TabPanels>
             </TabGroup>

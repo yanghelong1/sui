@@ -39,7 +39,7 @@ export const router = sentryCreateBrowserRouter([
             { path: 'transactions', element: <Transactions /> },
             { path: 'object/:id', element: <ObjectResult /> },
             { path: 'checkpoint/:id', element: <CheckpointDetail /> },
-            { path: 'epoch/current', element: <EpochDetail /> },
+            { path: 'epoch/:id', element: <EpochDetail /> },
             { path: 'transaction/:id', element: <TransactionResult /> },
             { path: 'address/:id', element: <AddressResult /> },
             { path: 'validators', element: <ValidatorPageResult /> },

@@ -30,6 +30,7 @@ function createInternalLink<T extends string>(
     };
 }
 
+export const EpochLink = createInternalLink('epoch', 'epoch', (epoch) => epoch);
 export const CheckpointLink = createInternalLink('checkpoint', 'digest');
 export const CheckpointSequenceLink = createInternalLink(
     'checkpoint',

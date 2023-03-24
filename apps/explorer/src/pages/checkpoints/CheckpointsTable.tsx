@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useRpcClient } from '@mysten/core';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { TableFooter } from '~/components/Table/TableFooter';
 import { TxTableCol } from '~/components/transactions/TxCardUtils';
@@ -14,18 +14,21 @@ import { TableCard } from '~/ui/TableCard';
 import { Text } from '~/ui/Text';
 
 interface CheckpointsTableProps {
+    initialCursor?: number;
     initialLimit: number;
     disablePagination?: boolean;
     refetchInterval?: number;
 }
 
 export function CheckpointsTable({
+    initialCursor,
     initialLimit,
     disablePagination,
     refetchInterval,
 }: CheckpointsTableProps) {
     const rpc = useRpcClient();
     const [limit, setLimit] = useState(initialLimit);
+    const [cursor, setCursor] = useState(initialCursor);
 
     const countQuery = useQuery(['checkpoints', 'count'], () =>
         rpc.getLatestCheckpointSequenceNumber()
@@ -33,13 +36,19 @@ export function CheckpointsTable({
 
     const pagination = usePaginationStack<number>();
 
+    console.log(pagination);
+
+    useEffect(() => {
+        setCursor(pagination.cursor);
+    }, [pagination.cursor]);
+
     const { data: checkpointsData } = useQuery(
-        ['checkpoints', { limit, cursor: pagination.cursor }],
+        ['checkpoints', { limit, cursor }],
         () =>
             rpc.getCheckpoints({
                 limit,
                 descendingOrder: true,
-                cursor: pagination.cursor,
+                cursor: cursor,
             }),
         {
             keepPreviousData: true,

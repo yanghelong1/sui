@@ -29,7 +29,7 @@ export function useGetObject(
                     showDisplay: true,
                 },
             }),
-        { enabled: !!normalizedObjId }
+        { enabled: !!normalizedObjId, refetchInterval: 10000 }
     );
 
     return response;

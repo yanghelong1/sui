@@ -19,6 +19,7 @@ pub trait ExtendedApi {
         cursor: Option<EpochId>,
         /// maximum number of items per page
         limit: Option<usize>,
+        descending_order: Option<bool>,
     ) -> RpcResult<EpochPage>;
 
     /// Return current epoch info

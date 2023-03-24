@@ -9,6 +9,7 @@ import { Transactions } from '../transactions';
 import { CheckpointsTable } from '~/pages/checkpoints/CheckpointsTable';
 import { PlayPause } from '~/ui/PlayPause';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '~/ui/Tabs';
+import { EpochsTable } from '~/pages/epochs/EpochsTable';
 
 type Props = {
     initialLimit: number;
@@ -43,6 +44,7 @@ export function Activity({ initialLimit, disablePagination }: Props) {
                 <div className="relative">
                     <TabList>
                         <Tab>Transactions</Tab>
+                        <Tab>Epochs</Tab>
                         <Tab>Checkpoints</Tab>
                     </TabList>
 
@@ -61,9 +63,16 @@ export function Activity({ initialLimit, disablePagination }: Props) {
                             disablePagination={disablePagination}
                         />
                     </TabPanel>
-
+                    <TabPanel>
+                        <EpochsTable
+                            refetchInterval={refetchInterval}
+                            initialLimit={initialLimit}
+                            disablePagination={disablePagination}
+                        />
+                    </TabPanel>
                     <TabPanel>
                         <CheckpointsTable
+                            initialCursor={null}
                             refetchInterval={refetchInterval}
                             initialLimit={initialLimit}
                             disablePagination={disablePagination}

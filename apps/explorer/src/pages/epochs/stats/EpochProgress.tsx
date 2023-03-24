@@ -23,7 +23,7 @@ export function EpochProgress({
     end,
     inProgress = true,
 }: EpochProgressProps) {
-    const { progress, label } = useEpochProgress(start, end);
+    const { progress, label } = useEpochProgress();
 
     return (
         <Card bg={inProgress ? 'highlight' : 'default'} spacing="lg">
@@ -46,14 +46,29 @@ export function EpochProgress({
                             {formatDate(start)}
                         </Text>
                     </div>
+                    {!inProgress && (
+                        <div>
+                            <Text
+                                variant="p4/normal"
+                                uppercase
+                                color="steel-darker"
+                            >
+                                End
+                            </Text>
+                            <Text variant="p3/semibold" color="steel-darker">
+                                {formatDate(end)}
+                            </Text>
+                        </div>
+                    )}
                 </div>
-
-                <div className="space-y-1.5">
-                    <Heading variant="heading6/medium" color="steel-darker">
-                        {label}
-                    </Heading>
-                    <ProgressBar progress={progress} />
-                </div>
+                {inProgress ? (
+                    <div className="space-y-1.5">
+                        <Heading variant="heading6/medium" color="steel-darker">
+                            {label}
+                        </Heading>
+                        <ProgressBar progress={progress} />
+                    </div>
+                ) : null}
             </div>
         </Card>
     );
