@@ -1781,7 +1781,9 @@ impl VersionedProtocolMessage for SenderSignedData {
         // SuiError::WrongMessageVersion
         for sig in &self.inner().tx_signatures {
             match sig {
-                GenericSignature::MultiSig(_) | GenericSignature::Signature(_) => (),
+                GenericSignature::Signature(_)
+                | GenericSignature::MultiSig(_)
+                | GenericSignature::OpenIdAuthenticator(_) => (),
             }
         }
 
@@ -1797,7 +1799,7 @@ impl Message for SenderSignedData {
         TransactionDigest::new(default_hash(&self.intent_message().value))
     }
 
-    fn verify(&self, _sig_epoch: Option<EpochId>) -> SuiResult {
+    fn verify(&self, sig_epoch: Option<EpochId>) -> SuiResult {
         fp_ensure!(
             self.0.len() == 1,
             SuiError::UserInputError {
@@ -1832,7 +1834,7 @@ impl Message for SenderSignedData {
 
         // Verify all present signatures.
         for (signer, signature) in present_sigs {
-            signature.verify_secure_generic(self.intent_message(), signer)?;
+            signature.verify_secure_generic(self.intent_message(), signer, sig_epoch)?;
         }
         Ok(())
     }

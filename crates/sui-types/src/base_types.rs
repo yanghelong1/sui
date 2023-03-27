@@ -29,6 +29,7 @@ use crate::messages::VerifiedTransaction;
 use crate::messages_checkpoint::CheckpointTimestamp;
 use crate::multisig::MultiSigPublicKey;
 use crate::object::{Object, Owner};
+use crate::openid_authenticator::OpenIdAuthenticator;
 use crate::parse_sui_struct_tag;
 use crate::signature::GenericSignature;
 use crate::sui_serde::HexAccountAddress;
@@ -540,6 +541,19 @@ impl From<MultiSigPublicKey> for SuiAddress {
     }
 }
 
+/// Sui address for [struct OpenIdAuthenticator] is defined as the hash
+/// of the four fields in the prepared verifying key.
+impl From<&OpenIdAuthenticator> for SuiAddress {
+    fn from(authenticator: &OpenIdAuthenticator) -> Self {
+        let mut hasher = DefaultHash::default();
+        hasher.update(&authenticator.vk_gamma_abc_g1);
+        hasher.update(&authenticator.alpha_g1_beta_g2);
+        hasher.update(&authenticator.gamma_g2_neg_pc);
+        hasher.update(&authenticator.delta_g2_neg_pc);
+        SuiAddress(hasher.finalize().digest)
+    }
+}
+
 impl TryFrom<&GenericSignature> for SuiAddress {
     type Error = SuiError;
     /// Derive a SuiAddress from a serialized signature in Sui [GenericSignature].
@@ -556,6 +570,7 @@ impl TryFrom<&GenericSignature> for SuiAddress {
                 SuiAddress::from(&pub_key)
             }
             GenericSignature::MultiSig(ms) => ms.multisig_pk.clone().into(),
+            GenericSignature::OpenIdAuthenticator(p) => p.into(),
         })
     }
 }

@@ -1578,8 +1578,9 @@ pub enum SignatureScheme {
     ED25519,
     Secp256k1,
     Secp256r1,
-    BLS12381, // This is currently not supported for user Sui Address.
     MultiSig,
+    BLS12381, // This is currently not supported for user Sui Address.
+    OpenIdAuthenticator,
 }
 
 impl SignatureScheme {
@@ -1590,6 +1591,7 @@ impl SignatureScheme {
             SignatureScheme::Secp256r1 => 0x02,
             SignatureScheme::MultiSig => 0x03,
             SignatureScheme::BLS12381 => 0x04, // This is currently not supported for user Sui Address.
+            SignatureScheme::OpenIdAuthenticator => 0x05,
         }
     }
 
@@ -1606,6 +1608,8 @@ impl SignatureScheme {
             0x01 => Ok(SignatureScheme::Secp256k1),
             0x02 => Ok(SignatureScheme::Secp256r1),
             0x03 => Ok(SignatureScheme::MultiSig),
+            0x04 => Ok(SignatureScheme::BLS12381),
+            0x05 => Ok(SignatureScheme::OpenIdAuthenticator),
             _ => Err(SuiError::KeyConversionError(
                 "Invalid key scheme".to_string(),
             )),
