@@ -51,19 +51,19 @@ pub struct GasStatus<'a> {
     charge: bool,
 
     // The current height of the operand stack, and the maximal height that it has reached.
-    stack_height_high_water_mark: u64,
+    pub stack_height_high_water_mark: u64,
     stack_height_current: u64,
     stack_height_next_tier_start: Option<u64>,
     stack_height_current_tier_mult: u64,
 
     // The current (abstract) size  of the operand stack and the maximal size that it has reached.
-    stack_size_high_water_mark: u64,
+    pub stack_size_high_water_mark: u64,
     stack_size_current: u64,
     stack_size_next_tier_start: Option<u64>,
     stack_size_current_tier_mult: u64,
 
     // The total number of bytecode instructions that have been executed in the transaction.
-    instructions_executed: u64,
+    pub instructions_executed: u64,
     instructions_next_tier_start: Option<u64>,
     instructions_current_tier_mult: u64,
 }
@@ -240,8 +240,8 @@ impl<'a> GasStatus<'a> {
     }
 
     /// Return the gas left.
-    pub fn remaining_gas(&self) -> Gas {
-        self.gas_left.to_unit_round_down()
+    pub fn remaining_gas(&self) -> InternalGas {
+        self.gas_left
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.

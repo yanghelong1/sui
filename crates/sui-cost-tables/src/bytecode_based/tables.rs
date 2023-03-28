@@ -766,18 +766,18 @@ pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
     new_from_instructions(instrs)
 });
 
-pub fn initial_cost_schedule_for_unit_tests() -> move_vm_test_utils::gas_schedule::CostTable {
-    move_vm_test_utils::gas_schedule::CostTable {
-        instruction_table: INITIAL_COST_SCHEDULE
-            .clone()
-            .instruction_table
-            .into_iter()
-            .map(|gas_cost| {
-                move_vm_test_utils::gas_schedule::GasCost::new(
-                    gas_cost.instruction_gas,
-                    gas_cost.memory_gas,
-                )
-            })
-            .collect(),
-    }
-}
+// pub fn initial_cost_schedule_for_unit_tests() -> move_vm_test_utils::gas_schedule::CostTable {
+//     move_vm_test_utils::gas_schedule::CostTable {
+//         instruction_table: INITIAL_COST_SCHEDULE
+//             .clone()
+//             .instruction_table
+//             .into_iter()
+//             .map(|gas_cost| {
+//                 move_vm_test_utils::gas_schedule::GasCost::new(
+//                     gas_cost.instruction_gas,
+//                     gas_cost.memory_gas,
+//                 )
+//             })
+//             .collect(),
+//     }
+// }
