@@ -4,7 +4,7 @@
 use crate::{
     db_tool::{execute_db_tool_command, print_db_all_tables, DbToolCommand},
     get_object, get_transaction_block, make_clients, restore_from_db_checkpoint,
-    ConciseObjectOutput, GroupedObjectOutput, VerboseObjectOutput,
+    verify_db_checkpoint, ConciseObjectOutput, GroupedObjectOutput, VerboseObjectOutput,
 };
 use anyhow::Result;
 use std::path::PathBuf;
@@ -138,6 +138,16 @@ pub enum ToolCommand {
         config_path: PathBuf,
         #[clap(long = "db-checkpoint-path")]
         db_checkpoint_path: PathBuf,
+        #[clap(
+            long = "unsafe-no-verify",
+            help = "skip verification of db checkpoint. Should only be used for trusted sources or emergencies"
+        )]
+        unsafe_no_verify: bool,
+        #[clap(
+            long = "genesis",
+            help = "Required unless --unsafe-no-verify is specified"
+        )]
+        genesis: Option<PathBuf>,
     },
 }
 
@@ -286,9 +296,23 @@ impl ToolCommand {
             ToolCommand::RestoreFromDBCheckpoint {
                 config_path,
                 db_checkpoint_path,
+                unsafe_no_verify,
+                genesis,
             } => {
                 let config = sui_config::NodeConfig::load(config_path)?;
-                restore_from_db_checkpoint(&config, &db_checkpoint_path).await?;
+
+                if unsafe_no_verify {
+                    println!("WARNING: Skipping verification of db checkpoint. Should only be used for trusted sources or emergencies");
+                    restore_from_db_checkpoint(&config, &db_checkpoint_path).await?;
+                } else if let Some(genesis) = genesis {
+                    let genesis = Genesis::load(genesis).unwrap();
+                    restore_from_db_checkpoint(&config, &db_checkpoint_path).await?;
+                    verify_db_checkpoint(&config, genesis).await?;
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "Must specify --genesis unless --unsafe-no-verify is specified"
+                    ));
+                }
             }
         };
         Ok(())

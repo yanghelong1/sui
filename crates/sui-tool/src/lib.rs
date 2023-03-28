@@ -8,10 +8,16 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::{fs, io};
 use sui_config::{genesis::Genesis, NodeConfig};
+use sui_core::authority::AuthorityStore;
 use sui_core::authority_client::{AuthorityAPI, NetworkAuthorityClient};
+use sui_core::checkpoints::CheckpointStore;
+use sui_core::epoch::committee_store::CommitteeStore;
+use sui_core::state_accumulator::StateAccumulator;
 use sui_network::default_mysten_network_config;
+use sui_types::messages_checkpoint::CheckpointCommitment;
 use sui_types::multiaddr::Multiaddr;
 use sui_types::object::ObjectFormatOptions;
 use sui_types::{base_types::*, messages::*, object::Owner};
@@ -562,5 +568,60 @@ pub async fn restore_from_db_checkpoint(
     db_checkpoint_path: &Path,
 ) -> Result<(), anyhow::Error> {
     copy_dir_all(db_checkpoint_path, config.db_path(), vec![])?;
+    Ok(())
+}
+
+pub async fn verify_db_checkpoint(
+    config: &NodeConfig,
+    genesis: Genesis,
+) -> Result<(), anyhow::Error> {
+    // TODO: chek that the node is not running, as this would invalidate the live object set
+    // state hash
+
+    // All of these stores will be recreated during the call to SuiNode::start, however
+    // we need to instantiate them early before starting the node. We could consider
+    // implementing a builder pattern for SuiNode in the future so that we don't have to
+    // redo this work.
+    // let tmp = tempfile::tempdir().unwrap();
+    let checkpoint_store = CheckpointStore::new(&config.db_path().join("checkpoints"));
+    let genesis_committee = genesis.committee()?;
+    let committee_store = Arc::new(CommitteeStore::new(
+        config.db_path().join("epochs"),
+        &genesis_committee,
+        None,
+    ));
+    let authority_store = Arc::new(
+        AuthorityStore::open(
+            &config.db_path().join("store"),
+            None,
+            &genesis,
+            &committee_store,
+            config.indirect_objects_threshold,
+        )
+        .await?,
+    );
+
+    let accumulator = StateAccumulator::new(authority_store);
+    let state_digest = accumulator.digest_live_object_set();
+    let checkpoint = checkpoint_store
+        .get_highest_executed_checkpoint()
+        .expect("Getting checkpoint from store cannot fail")
+        .expect("Checkpoint store does not contain any checkpoints");
+    let epoch_commitment = checkpoint
+        .end_of_epoch_data
+        .as_ref()
+        .expect("Checkpoint store should be at epoch boundary after restore from snapshot")
+        .epoch_commitments
+        .first();
+    if let Some(CheckpointCommitment::ECMHLiveObjectSetDigest(digest)) = epoch_commitment {
+        if digest.digest != state_digest.digest {
+            return Err(anyhow::anyhow!(
+                    "WARNING: State digest after restore from db checkpoint does not match end of epoch digest commitment from network. Expected: {:?}, Actual: {:?}",
+                    digest,
+                    state_digest
+                ));
+        }
+    }
+
     Ok(())
 }
