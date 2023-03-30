@@ -105,7 +105,7 @@ async fn test_public_transfer_object() -> Result<(), anyhow::Error> {
     let gas = objects.clone().last().unwrap().object().unwrap().object_id;
 
     let transaction_bytes: TransactionBlockBytes = http_client
-        .transfer_object(*address, obj, Some(gas), 1000, *address)
+        .transfer_object(*address, obj, Some(gas), 1000.into(), *address)
         .await?;
 
     let keystore_path = cluster.swarm.dir().join(SUI_KEYSTORE_FILENAME);
@@ -174,7 +174,7 @@ async fn test_publish() -> Result<(), anyhow::Error> {
             compiled_modules_bytes,
             dependencies,
             Some(gas.object_id),
-            10000,
+            10000.into(),
         )
         .await?;
 
@@ -233,7 +233,7 @@ async fn test_move_call() -> Result<(), anyhow::Error> {
             type_args![GAS::type_tag()]?,
             call_args!(coin.object_id, 10)?,
             Some(gas.object_id),
-            10_000,
+            10_000.into(),
             None,
         )
         .await?;
@@ -422,7 +422,7 @@ async fn test_get_metadata() -> Result<(), anyhow::Error> {
             compiled_modules_bytes,
             dependencies,
             Some(gas.object_id),
-            10000,
+            10000.into(),
         )
         .await?;
 
@@ -504,7 +504,7 @@ async fn test_get_total_supply() -> Result<(), anyhow::Error> {
             compiled_modules_bytes,
             dependencies,
             Some(gas.object_id),
-            10000,
+            10000.into(),
         )
         .await?;
 
@@ -575,7 +575,7 @@ async fn test_get_total_supply() -> Result<(), anyhow::Error> {
             type_args![coin_name]?,
             call_args![treasury_cap, 100000, address]?,
             Some(gas.object_id),
-            10_000,
+            10_000.into(),
             None,
         )
         .await?;
@@ -642,10 +642,10 @@ async fn test_staking() -> Result<(), anyhow::Error> {
         .request_add_stake(
             *address,
             vec![coin],
-            Some(1000000000),
+            Some(1000000000.into()),
             validator,
             None,
-            10000,
+            10000.into(),
         )
         .await?;
     let keystore_path = cluster.swarm.dir().join(SUI_KEYSTORE_FILENAME);
@@ -710,10 +710,10 @@ async fn test_unstaking() -> Result<(), anyhow::Error> {
             .request_add_stake(
                 *address,
                 vec![coins.data[i].coin_object_id],
-                Some(1000000000),
+                Some(1000000000.into()),
                 validator,
                 None,
-                10000,
+                10000.into(),
             )
             .await?;
         let keystore_path = cluster.swarm.dir().join(SUI_KEYSTORE_FILENAME);
@@ -771,7 +771,7 @@ async fn test_unstaking() -> Result<(), anyhow::Error> {
             *address,
             staked_sui_copy[0].stakes[2].staked_sui_id,
             None,
-            100000,
+            100000.into(),
         )
         .await?;
     let keystore_path = cluster.swarm.dir().join(SUI_KEYSTORE_FILENAME);
@@ -848,10 +848,10 @@ async fn test_staking_multiple_coins() -> Result<(), anyhow::Error> {
                 coins.data[1].coin_object_id,
                 coins.data[2].coin_object_id,
             ],
-            Some(1000000000),
+            Some(1000000000.into()),
             validator,
             None,
-            10000,
+            10000.into(),
         )
         .await?;
     let keystore_path = cluster.swarm.dir().join(SUI_KEYSTORE_FILENAME);

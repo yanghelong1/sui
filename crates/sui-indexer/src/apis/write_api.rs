@@ -6,15 +6,17 @@ use fastcrypto::encoding::Base64;
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::http_client::HttpClient;
 use jsonrpsee::RpcModule;
+
 use sui_json_rpc::api::{WriteApiClient, WriteApiServer};
 use sui_json_rpc::SuiRpcModule;
 use sui_json_rpc_types::{
-    BigInt, DevInspectResults, DryRunTransactionBlockResponse, SuiTransactionBlockResponse,
+    DevInspectResults, DryRunTransactionBlockResponse, SuiTransactionBlockResponse,
     SuiTransactionBlockResponseOptions,
 };
 use sui_open_rpc::Module;
-use sui_types::base_types::{EpochId, SuiAddress};
+use sui_types::base_types::SuiAddress;
 use sui_types::messages::ExecuteTransactionRequestType;
+use sui_types::sui_serde::BigInt;
 
 use crate::models::transactions::Transaction;
 use crate::store::IndexerStore;
@@ -73,7 +75,7 @@ where
         sender_address: SuiAddress,
         tx_bytes: Base64,
         gas_price: Option<BigInt>,
-        epoch: Option<EpochId>,
+        epoch: Option<BigInt>,
     ) -> RpcResult<DevInspectResults> {
         self.fullnode
             .dev_inspect_transaction_block(sender_address, tx_bytes, gas_price, epoch)

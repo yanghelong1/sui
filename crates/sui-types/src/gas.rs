@@ -2,14 +2,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::{UserInputError, UserInputResult};
-use crate::messages::TransactionEffects;
-use crate::{
-    error::{ExecutionError, ExecutionErrorKind},
-    gas_coin::GasCoin,
-    messages::TransactionEffectsAPI,
-    object::{Object, Owner},
-};
+use crate::sui_serde::Readable;
 use itertools::MultiUnzip;
 use move_core_types::{
     gas_algebra::{GasQuantity, InternalGas, InternalGasPerByte, NumBytes, UnitDiv},
@@ -18,16 +11,29 @@ use move_core_types::{
 use once_cell::sync::Lazy;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use std::ops::AddAssign;
 use std::{
     convert::TryFrom,
     ops::{Add, Deref, Mul},
 };
+
 use sui_cost_tables::{
     bytecode_tables::{GasStatus, INITIAL_COST_SCHEDULE},
     units_types::GasUnit,
 };
 use sui_protocol_config::*;
+
+use crate::error::{UserInputError, UserInputResult};
+use crate::messages::TransactionEffects;
+use crate::sui_serde::BigInt;
+use crate::{
+    error::{ExecutionError, ExecutionErrorKind},
+    gas_coin::GasCoin,
+    messages::TransactionEffectsAPI,
+    object::{Object, Owner},
+};
 
 macro_rules! ok_or_gas_balance_error {
     ($balance:expr, $required:expr) => {
@@ -123,17 +129,27 @@ pub type SuiGas = GasQuantity<SuiGasUnit>;
 /// by the "nonrefundable rate" such that:
 /// `potential_rebate(storage cost of deleted/mutated objects) =
 /// storage_rebate + non_refundable_storage_fee`
+
+#[serde_as]
 #[derive(Eq, PartialEq, Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GasCostSummary {
     /// Cost of computation/execution
+    #[schemars(with = "BigInt")]
+    #[serde_as(as = "Readable<DisplayFromStr, _>")]
     pub computation_cost: u64,
     /// Storage cost, it's the sum of all storage cost for all objects created or mutated.
+    #[schemars(with = "BigInt")]
+    #[serde_as(as = "Readable<DisplayFromStr, _>")]
     pub storage_cost: u64,
     /// The amount of storage cost refunded to the user for all objects deleted or mutated in the
     /// transaction.
+    #[schemars(with = "BigInt")]
+    #[serde_as(as = "Readable<DisplayFromStr, _>")]
     pub storage_rebate: u64,
     /// The fee for the rebate. The portion of the storage rebate kept by the system.
+    #[schemars(with = "BigInt")]
+    #[serde_as(as = "Readable<DisplayFromStr, _>")]
     pub non_refundable_storage_fee: u64,
 }
 
