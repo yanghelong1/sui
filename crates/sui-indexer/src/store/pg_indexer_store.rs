@@ -210,7 +210,7 @@ impl IndexerStore for PgIndexerStore {
         read_only!(&self.cp, |conn| {
             let cp: Checkpoint = match id {
                 CheckpointId::SequenceNumber(seq) => checkpoints_dsl::checkpoints
-                    .filter(checkpoints::sequence_number.eq(<u64>::from(seq) as i64))
+                    .filter(checkpoints::sequence_number.eq(seq as i64))
                     .limit(1)
                     .first(conn),
                 CheckpointId::Digest(digest) => checkpoints_dsl::checkpoints

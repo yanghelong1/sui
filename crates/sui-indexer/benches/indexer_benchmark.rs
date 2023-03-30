@@ -44,9 +44,7 @@ fn indexer_benchmark(c: &mut Criterion) {
         b.iter(|| store.persist_checkpoint(&checkpoints.pop().unwrap()))
     });
 
-    let mut checkpoints = (20..100)
-        .cycle()
-        .map(|i| CheckpointId::SequenceNumber(i.into()));
+    let mut checkpoints = (20..100).cycle().map(CheckpointId::SequenceNumber);
     c.bench_function("get_checkpoint", |b| {
         b.iter(|| store.get_checkpoint(checkpoints.next().unwrap()).unwrap())
     });
