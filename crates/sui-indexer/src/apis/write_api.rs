@@ -90,8 +90,8 @@ where
         &self,
         sender_address: SuiAddress,
         tx_bytes: Base64,
-        gas_price: Option<BigInt>,
-        epoch: Option<BigInt>,
+        gas_price: Option<BigInt<u64>>,
+        epoch: Option<BigInt<u64>>,
     ) -> RpcResult<DevInspectResults> {
         self.fullnode
             .dev_inspect_transaction_block(sender_address, tx_bytes, gas_price, epoch)
