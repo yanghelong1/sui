@@ -183,8 +183,8 @@ pub struct SuiObjectData {
     /// The amount of SUI we would rebate if this object gets deleted.
     /// This number is re-calculated each time the object is mutated based on
     /// the present storage gas price.
-    #[schemars(with = "Option<BigInt>")]
-    #[serde_as(as = "Option<BigInt>")]
+    #[schemars(with = "Option<BigInt<u64>>")]
+    #[serde_as(as = "Option<BigInt<u64>>")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_rebate: Option<u64>,
     /// The Display metadata for frontend UI rendering, default to be None unless SuiObjectDataOptions.showContent is set to true
@@ -1030,8 +1030,8 @@ pub type ObjectsPage = Page<SuiObjectResponse, CheckpointedObjectID>;
 #[serde(rename_all = "camelCase")]
 pub struct CheckpointedObjectID {
     pub object_id: ObjectID,
-    #[schemars(with = "Option<BigInt>")]
-    #[serde_as(as = "Option<BigInt>")]
+    #[schemars(with = "Option<BigInt<u64>>")]
+    #[serde_as(as = "Option<BigInt<u64>>")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub at_checkpoint: Option<CheckpointSequenceNumber>,
 }
@@ -1076,8 +1076,8 @@ pub enum SuiObjectDataFilter {
     // allow querying for multiple object ids
     ObjectIds(Vec<ObjectID>),
     Version(
-        #[schemars(with = "BigInt")]
-        #[serde_as(as = "BigInt")]
+        #[schemars(with = "BigInt<u64>")]
+        #[serde_as(as = "BigInt<u64>")]
         u64,
     ),
 }
