@@ -6,6 +6,7 @@ import {
     useGetRollingAverageApys,
     type ApyByValidator,
     useGetValidatorsEvents,
+    formatPercentageDisplay,
 } from '@mysten/core';
 import { type SuiEvent, type SuiValidatorSummary } from '@mysten/sui.js';
 import { lazy, Suspense, useMemo } from 'react';
@@ -55,11 +56,7 @@ export function validatorsTableData(
                     },
                     stake: totalStake,
                     // show the rolling average apy even if its zero, otherwise show -- for no data
-                    apy:
-                        rollingAverageApys?.[validator.suiAddress] ||
-                        rollingAverageApys?.[validator.suiAddress] === 0
-                            ? rollingAverageApys?.[validator.suiAddress]
-                            : null,
+                    apy: rollingAverageApys?.[validator.suiAddress] ?? null,
                     nextEpochGasPrice: validator.nextEpochGasPrice,
                     commission: +validator.commissionRate / 100,
                     img: img,
@@ -139,7 +136,7 @@ export function validatorsTableData(
                     const apy = props.getValue();
                     return (
                         <Text variant="bodySmall/medium" color="steel-darker">
-                            {apy === null ? '--' : `${apy}%`}
+                            {formatPercentageDisplay(apy)}
                         </Text>
                     );
                 },
@@ -222,7 +219,7 @@ function ValidatorPageResult() {
             !rollingAverageApys ||
             Object.keys(rollingAverageApys)?.length === 0
         )
-            return 0;
+            return null;
         const apys = Object.values(rollingAverageApys);
         const averageAPY = apys?.reduce((acc, cur) => acc + cur, 0);
         return roundFloat(averageAPY / apys.length, APY_DECIMALS);
