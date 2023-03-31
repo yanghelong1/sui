@@ -19,9 +19,9 @@ export const CoinStruct = object({
   coinType: string(),
   // TODO(chris): rename this to objectId
   coinObjectId: ObjectId,
-  version: number(),
+  version: string(),
   digest: TransactionDigest,
-  balance: number(),
+  balance: string(),
   lockedUntilEpoch: nullable(number()),
   previousTransaction: TransactionDigest,
 });
@@ -39,7 +39,7 @@ export type PaginatedCoins = Infer<typeof PaginatedCoins>;
 export const CoinBalance = object({
   coinType: string(),
   coinObjectCount: number(),
-  totalBalance: number(),
+  totalBalance: string(),
   lockedBalance: object({
     epochId: optional(number()),
     number: optional(number()),

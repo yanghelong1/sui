@@ -18,10 +18,10 @@ import {
 import { TransactionDigest, TransactionEffectsDigest } from './common';
 
 export const GasCostSummary = object({
-  computationCost: number(),
-  storageCost: number(),
-  storageRebate: number(),
-  nonRefundableStorageFee: number(),
+  computationCost: string(),
+  storageCost: string(),
+  storageRebate: string(),
+  nonRefundableStorageFee: string(),
 });
 export type GasCostSummary = Infer<typeof GasCostSummary>;
 
@@ -40,8 +40,8 @@ export const CheckpointCommitment = any();
 export type CheckpointCommitment = Infer<typeof CheckpointCommitment>;
 
 export const EndOfEpochData = object({
-  nextEpochCommittee: array(tuple([string(), number()])),
-  nextEpochProtocolVersion: number(),
+  nextEpochCommittee: array(tuple([string(), string()])),
+  nextEpochProtocolVersion: string(),
   epochCommitments: array(CheckpointCommitment),
 });
 export type EndOfEpochData = Infer<typeof EndOfEpochData>;
@@ -52,13 +52,13 @@ export const ExecutionDigests = object({
 });
 
 export const Checkpoint = object({
-  epoch: number(),
+  epoch: string(),
   sequenceNumber: string(),
   digest: CheckpointDigest,
-  networkTotalTransactions: number(),
+  networkTotalTransactions: string(),
   previousDigest: optional(CheckpointDigest),
   epochRollingGasCostSummary: GasCostSummary,
-  timestampMs: number(),
+  timestampMs: string(),
   endOfEpochData: optional(EndOfEpochData),
   transactions: array(TransactionDigest),
   checkpointCommitments: array(CheckpointCommitment),

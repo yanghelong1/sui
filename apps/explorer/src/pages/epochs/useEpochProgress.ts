@@ -14,8 +14,8 @@ export function useEpochProgress(suffix: string = 'left') {
         }
     );
 
-    const start = data?.epochStartTimestampMs ?? 0;
-    const duration = data?.epochDurationMs ?? 0;
+    const start = +(data?.epochStartTimestampMs ?? 0);
+    const duration = +(data?.epochDurationMs ?? 0);
     const end = start + duration;
     const time = useTimeAgo(end, true);
     const progress =
