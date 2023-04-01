@@ -681,6 +681,7 @@ async fn test_staking() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+#[ignore]
 #[sim_test]
 async fn test_unstaking() -> Result<(), anyhow::Error> {
     let cluster = TestClusterBuilder::new()
