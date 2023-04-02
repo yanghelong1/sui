@@ -1016,7 +1016,7 @@ impl SuiNode {
                     None
                 }
             } else {
-                self.check_system_consistency();
+                self.check_system_consistency(cur_epoch_store.clone(), &checkpoint_executor);
 
                 let new_epoch_store = self
                     .reconfigure_state(
@@ -1053,7 +1053,6 @@ impl SuiNode {
         }
     }
 
-    #[allow(dead_code)]
     fn check_is_consistent_state(
         &self,
         accumulator: Arc<StateAccumulator>,
@@ -1112,7 +1111,11 @@ impl SuiNode {
         new_epoch_store
     }
 
-    fn check_system_consistency(&self) {
+    fn check_system_consistency(
+        &self,
+        cur_epoch_store: Arc<AuthorityPerEpochStore>,
+        checkpoint_executor: &CheckpointExecutor,
+    ) {
         if !self.config.enable_expensive_safety_checks && cfg!(not(debug_assertions)) {
             // We only do these checks if either the expensive safety checks are enabled or we are
             // running in debug mode.
@@ -1147,6 +1150,14 @@ impl SuiNode {
                 warn!(err);
             }
         }
+
+        // check for root state hash consistency with live object set
+        let is_inconsistent_state = self.check_is_consistent_state(
+            self.accumulator.clone(),
+            cur_epoch_store.epoch(),
+            cfg!(debug_assertions), // panic in debug mode only
+        );
+        checkpoint_executor.set_inconsistent_state(is_inconsistent_state);
     }
 }
 
