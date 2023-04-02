@@ -1759,11 +1759,11 @@ pub fn base_db_options() -> DBOptions {
 
     // The table cache is locked for updates and this determines the number
     // of shards, ie 2^10. Increase in case of lock contentions.
-    opt.set_table_cache_num_shard_bits(10);
+    opt.set_table_cache_num_shard_bits(6);
 
     opt.set_compression_type(rocksdb::DBCompressionType::Lz4);
     opt.set_bottommost_compression_type(rocksdb::DBCompressionType::Zstd);
-    opt.set_bottommost_zstd_max_train_bytes(0, true);
+    opt.set_bottommost_zstd_max_train_bytes(1024 * 1024, true);
 
     // Sui uses multiple RocksDB in a node, so total sizes of write buffers and WAL can be higher
     // than the limits below.

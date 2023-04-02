@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::authority::authority_store::LockDetailsWrapper;
-use rocksdb::Options;
+use rocksdb::{BlockBasedOptions, Cache, Options};
 use std::path::Path;
 use sui_types::accumulator::Accumulator;
 use sui_types::base_types::SequenceNumber;
@@ -364,11 +364,36 @@ impl Iterator for LiveSetIter<'_> {
 
 // These functions are used to initialize the DB tables
 fn owned_object_transaction_locks_table_default_config() -> DBOptions {
-    point_lookup_db_options()
+    let mut db_options = point_lookup_db_options();
+    let mut block_options = BlockBasedOptions::default();
+    // Configure a 64MiB block cache.
+    block_options.set_block_cache(&Cache::new_lru_cache(1024 << 20).unwrap());
+    // Set a bloomfilter with 1% false positive rate.
+    block_options.set_bloom_filter(10.0, false);
+
+    // From https://github.com/EighteenZi/rocksdb_wiki/blob/master/Block-Cache.md#caching-index-and-filter-blocks
+    block_options.set_pin_l0_filter_and_index_blocks_in_cache(true);
+
+    db_options
+        .options
+        .set_block_based_table_factory(&block_options);
+    db_options
 }
 
 fn objects_table_default_config() -> DBOptions {
-    let db_options = point_lookup_db_options();
+    let mut db_options = point_lookup_db_options();
+    let mut block_options = BlockBasedOptions::default();
+    // Configure a 64MiB block cache.
+    block_options.set_block_cache(&Cache::new_lru_cache(5 * 1024 << 20).unwrap());
+    // Set a bloomfilter with 1% false positive rate.
+    block_options.set_bloom_filter(10.0, false);
+
+    // From https://github.com/EighteenZi/rocksdb_wiki/blob/master/Block-Cache.md#caching-index-and-filter-blocks
+    block_options.set_pin_l0_filter_and_index_blocks_in_cache(true);
+
+    db_options
+        .options
+        .set_block_based_table_factory(&block_options);
     DBOptions {
         options: db_options.options,
         rw_options: ReadWriteOptions {
