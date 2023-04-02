@@ -3046,6 +3046,7 @@ async fn test_authority_persist() {
             AuthorityStorePruningConfig::default(),
             &[], // no genesis objects
             &DBCheckpointConfig::default(),
+            ExpensiveSafetyCheckConfig::new_enable_all(),
         )
         .await
     }

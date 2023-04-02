@@ -43,7 +43,9 @@ use shared_crypto::intent::{Intent, IntentScope};
 use sui_adapter::execution_engine;
 use sui_adapter::{adapter, execution_mode};
 use sui_config::genesis::Genesis;
-use sui_config::node::{AuthorityStorePruningConfig, DBCheckpointConfig};
+use sui_config::node::{
+    AuthorityStorePruningConfig, DBCheckpointConfig, ExpensiveSafetyCheckConfig,
+};
 use sui_framework::{MoveStdlib, SuiFramework, SuiSystem, SystemPackage};
 use sui_json_rpc_types::{
     Checkpoint, DevInspectResults, DryRunTransactionBlockResponse, EventFilter, SuiEvent,
@@ -92,6 +94,7 @@ use crate::authority::authority_per_epoch_store::{AuthorityPerEpochStore, CertTx
 use crate::authority::authority_per_epoch_store_pruner::AuthorityPerEpochStorePruner;
 use crate::authority::authority_store::{ExecutionLockReadGuard, InputKey, ObjectLockStatus};
 use crate::authority::authority_store_pruner::AuthorityStorePruner;
+use crate::authority::authority_store_tables::LiveObject;
 use crate::authority::epoch_start_configuration::EpochStartConfigTrait;
 use crate::authority::epoch_start_configuration::EpochStartConfiguration;
 use crate::checkpoints::CheckpointStore;
@@ -488,6 +491,9 @@ pub struct AuthorityState {
 
     /// Take db checkpoints af different dbs
     db_checkpoint_config: DBCheckpointConfig,
+
+    /// Config controlling what kind of expensive safety checks to perform.
+    expensive_safety_check_config: ExpensiveSafetyCheckConfig,
 }
 
 /// The authority state encapsulates all state, drives execution, and ensures safety.
@@ -1621,6 +1627,7 @@ impl AuthorityState {
         pruning_config: AuthorityStorePruningConfig,
         genesis_objects: &[Object],
         db_checkpoint_config: &DBCheckpointConfig,
+        expensive_safety_check_config: ExpensiveSafetyCheckConfig,
     ) -> Arc<Self> {
         Self::check_protocol_version(supported_protocol_versions, epoch_store.protocol_version());
 
@@ -1659,6 +1666,7 @@ impl AuthorityState {
             _objects_pruner,
             _authority_per_epoch_pruner,
             db_checkpoint_config: db_checkpoint_config.clone(),
+            expensive_safety_check_config,
         });
 
         // Start a task to execute ready certificates.
@@ -1744,6 +1752,7 @@ impl AuthorityState {
             AuthorityStorePruningConfig::default(),
             genesis.objects(),
             &DBCheckpointConfig::default(),
+            ExpensiveSafetyCheckConfig::new_enable_all(),
         )
         .await;
 
@@ -1834,6 +1843,7 @@ impl AuthorityState {
         let mut execution_lock = db.execution_lock_for_reconfiguration().await;
         self.revert_uncommitted_epoch_transactions(cur_epoch_store)
             .await?;
+        self.check_system_consistency();
         if let Some(checkpoint_path) = &self.db_checkpoint_config.checkpoint_path {
             if self
                 .db_checkpoint_config
@@ -1856,6 +1866,66 @@ impl AuthorityState {
         // see also assert in AuthorityState::process_certificate
         // on the epoch store and execution lock epoch match
         Ok(new_epoch_store)
+    }
+
+    fn check_system_consistency(&self) {
+        if self
+            .expensive_safety_check_config
+            .enable_epoch_sui_conservation_check()
+        {
+            if let Err(err) = self.check_system_consistency_impl() {
+                if cfg!(debug_assertions) {
+                    panic!("{}", err);
+                } else {
+                    // We cannot panic in production yet because it is known that there are some
+                    // inconsistencies in testnet. We will enable this once we make it balanced again in testnet.
+                    warn!("System consistency check failed: {}", err);
+                }
+            }
+        }
+    }
+
+    fn check_system_consistency_impl(&self) -> SuiResult {
+        let mut total_storage_rebate = 0;
+        let mut total_sui = 0;
+        for o in self.database.iter_live_object_set() {
+            match o {
+                LiveObject::Normal(object) => {
+                    total_storage_rebate += object.storage_rebate;
+                    // get_total_sui includes storage rebate, however all storage rebate is
+                    // also stored in the storage fund, so we need to subtract it here.
+                    total_sui += object.get_total_sui(&self.database)? - object.storage_rebate;
+                }
+                LiveObject::Wrapped(_) => (),
+            }
+        }
+        let system_state = self
+            .get_sui_system_state_object_during_reconfig()
+            .expect("Reading sui system state object cannot fail")
+            .into_sui_system_state_summary();
+
+        let storage_fund_balance = system_state.storage_fund_total_object_storage_rebates;
+        fp_ensure!(
+            total_storage_rebate == storage_fund_balance,
+            SuiError::from(
+                format!(
+                    "Inconsistent state detected at epoch {}: total storage rebate: {}, storage fund balance: {}",
+                    system_state.epoch, total_storage_rebate, storage_fund_balance
+                ).as_str()
+            )
+        );
+        const SUI_SUPPLY: u64 = 10_000_000_000_000_000_000; // 10B SUI in Mist.
+        fp_ensure!(
+            total_sui == SUI_SUPPLY,
+            SuiError::from(
+                format!(
+                    "Inconsistent state detected at epoch {}: total sui: {}, expecting {}",
+                    system_state.epoch, total_sui, SUI_SUPPLY
+                )
+                .as_str()
+            )
+        );
+        Ok(())
     }
 
     pub fn db(&self) -> Arc<AuthorityStore> {

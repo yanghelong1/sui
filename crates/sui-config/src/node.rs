@@ -98,7 +98,7 @@ pub struct NodeConfig {
     pub indirect_objects_threshold: usize,
 
     #[serde(default)]
-    pub enable_expensive_safety_checks: bool,
+    pub expensive_safety_check_config: ExpensiveSafetyCheckConfig,
 }
 
 fn default_authority_store_pruning_config() -> AuthorityStorePruningConfig {
@@ -264,6 +264,29 @@ pub struct CheckpointExecutorConfig {
     /// If unspecified, this will default to `10`.
     #[serde(default = "default_local_execution_timeout_sec")]
     pub local_execution_timeout_sec: u64,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExpensiveSafetyCheckConfig {
+    /// If enabled, at epoch boundary, we will check that the storage
+    /// fund balance is always identical to the sum of the storage
+    /// rebate of all live objects, and that the total SUI in the network is 10B.
+    #[serde(default)]
+    enable_epoch_sui_conservation_check: bool,
+    // TODO: Add more expensive checks here
+}
+
+impl ExpensiveSafetyCheckConfig {
+    pub fn new_enable_all() -> Self {
+        Self {
+            enable_epoch_sui_conservation_check: true,
+        }
+    }
+
+    pub fn enable_epoch_sui_conservation_check(&self) -> bool {
+        self.enable_epoch_sui_conservation_check || !cfg!(debug_assertions)
+    }
 }
 
 fn default_checkpoint_execution_max_concurrency() -> usize {
