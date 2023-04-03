@@ -3147,21 +3147,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "foreign-types"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
-dependencies = [
- "foreign-types-shared",
-]
-
-[[package]]
-name = "foreign-types-shared"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
 name = "form_urlencoded"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6369,48 +6354,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
-name = "openssl"
-version = "0.10.49"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2f106ab837a24e03672c59b1239669a0596406ff657c3c0835b6b7f0f35a33"
-dependencies = [
- "bitflags",
- "cfg-if",
- "foreign-types",
- "libc",
- "once_cell",
- "openssl-macros",
- "openssl-sys",
-]
-
-[[package]]
-name = "openssl-macros"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
-dependencies = [
- "proc-macro2 1.0.54",
- "quote 1.0.26",
- "syn 2.0.10",
-]
-
-[[package]]
 name = "openssl-probe"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
-
-[[package]]
-name = "openssl-sys"
-version = "0.9.84"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a20eace9dc2d82904039cb76dcf50fb1a0bba071cfd1629720b5d6f1ddba0fa"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
- "vcpkg",
-]
 
 [[package]]
 name = "ordered-float"
@@ -6842,19 +6789,6 @@ name = "portable-atomic"
 version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26f6a7b87c2e435a3241addceeeff740ff8b7e76b74c13bf9acb17fa454ea00b"
-
-[[package]]
-name = "postgres-openssl"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1de0ea6504e07ca78355a6fb88ad0f36cafe9e696cbc6717f16a207f3a60be72"
-dependencies = [
- "futures",
- "openssl",
- "tokio",
- "tokio-openssl",
- "tokio-postgres",
-]
 
 [[package]]
 name = "postgres-protocol"
@@ -7825,16 +7759,16 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.36.11"
+version = "0.36.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db4165c9963ab29e422d6c26fbc1d37f15bace6b2810221f9d925023480fcf0e"
+checksum = "4feacf7db682c6c329c4ede12649cd36ecab0f3be5b7d74e6a20304725db4549"
 dependencies = [
  "bitflags",
  "errno",
  "io-lifetimes",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.45.0",
+ "windows-sys 0.42.0",
 ]
 
 [[package]]
@@ -9182,9 +9116,8 @@ dependencies = [
  "move-core-types",
  "mysten-metrics",
  "ntest",
- "openssl",
- "postgres-openssl",
  "prometheus",
+ "rustls",
  "serde 1.0.152",
  "serde_json",
  "sui-config",
@@ -9203,6 +9136,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-postgres",
+ "tokio-postgres-rustls",
  "tokio-stream",
  "tracing",
  "url",
@@ -10475,18 +10409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-openssl"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c08f9ffb7809f1b20c1b398d92acf4cc719874b3b2b2d9ea2f09b4a80350878a"
-dependencies = [
- "futures-util",
- "openssl",
- "openssl-sys",
- "tokio",
-]
-
-[[package]]
 name = "tokio-postgres"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10508,6 +10430,20 @@ dependencies = [
  "socket2 0.5.1",
  "tokio",
  "tokio-util 0.7.4",
+]
+
+[[package]]
+name = "tokio-postgres-rustls"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "606f2b73660439474394432239c82249c0d45eb5f23d91f401be1e33590444a7"
+dependencies = [
+ "futures",
+ "ring",
+ "rustls",
+ "tokio",
+ "tokio-postgres",
+ "tokio-rustls",
 ]
 
 [[package]]
@@ -11716,6 +11652,8 @@ dependencies = [
  "data-encoding-macro",
  "data-encoding-macro-internal",
  "datatest-stable",
+ "deadpool",
+ "deadpool-runtime",
  "debug-ignore",
  "debugid",
  "der",
@@ -11729,6 +11667,7 @@ dependencies = [
  "determinator",
  "deunicode",
  "diesel",
+ "diesel-async",
  "diesel-derive-enum",
  "diesel_derives",
  "diesel_migrations",
@@ -11769,6 +11708,7 @@ dependencies = [
  "eyre",
  "fail 0.4.0",
  "fail 0.5.1",
+ "fallible-iterator",
  "fastcrypto",
  "fastcrypto-derive",
  "fastcrypto-zkp",
@@ -11904,6 +11844,7 @@ dependencies = [
  "matchers",
  "matchit 0.5.0",
  "matchit 0.7.0",
+ "md-5",
  "memchr",
  "memmap2",
  "memoffset 0.6.5",
@@ -12032,6 +11973,8 @@ dependencies = [
  "plotters-svg",
  "polyval",
  "portable-atomic",
+ "postgres-protocol",
+ "postgres-types",
  "pprof",
  "ppv-lite86",
  "pq-sys",
@@ -12123,6 +12066,7 @@ dependencies = [
  "scheduled-thread-pool",
  "schemars",
  "schemars_derive",
+ "scoped-futures",
  "scopeguard",
  "sct",
  "sec1",
@@ -12177,6 +12121,7 @@ dependencies = [
  "smallvec",
  "snap",
  "socket2 0.4.9",
+ "socket2 0.5.1",
  "soketto",
  "spin",
  "spki",
@@ -12184,6 +12129,7 @@ dependencies = [
  "static_assertions",
  "str-buf",
  "str_stack",
+ "stringprep",
  "strip-ansi-escapes",
  "strsim 0.10.0",
  "strsim 0.8.0",
@@ -12233,6 +12179,8 @@ dependencies = [
  "tokio",
  "tokio-io-timeout",
  "tokio-macros 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-postgres",
+ "tokio-postgres-rustls",
  "tokio-retry",
  "tokio-rustls",
  "tokio-stream",

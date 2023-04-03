@@ -6,6 +6,7 @@ use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use anyhow::Result;
 use backoff::future::retry;
@@ -20,9 +21,9 @@ use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use futures::FutureExt;
 use jsonrpsee::http_client::{HeaderMap, HeaderValue, HttpClient, HttpClientBuilder};
-use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
-use postgres_openssl::MakeTlsConnector;
 use prometheus::Registry;
+use rustls::client::{ServerCertVerified, ServerCertVerifier};
+use rustls::{Certificate, Error, ServerName};
 use tracing::{info, warn};
 use url::Url;
 
@@ -202,15 +203,31 @@ fn get_http_client(rpc_client_url: &str) -> Result<HttpClient, IndexerError> {
 
 fn establish_connection(url: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
     async {
-        let builder = SslConnector::builder(SslMethod::tls()).unwrap();
-        let mut connector = MakeTlsConnector::new(builder.build());
-        // TODO: we might want to set a proper SSL cert for DB and indexer
-        connector.set_callback(|config, _| {
-            config.set_verify_hostname(false);
-            config.set_verify(SslVerifyMode::NONE);
-            Ok(())
-        });
+        let mut config = rustls::ClientConfig::builder()
+            .with_safe_defaults()
+            .with_root_certificates(rustls::RootCertStore::empty())
+            .with_no_client_auth();
 
+        // TODO: we might want to set a proper SSL cert for DB and indexer
+        struct AcceptAllVerifier;
+        impl ServerCertVerifier for AcceptAllVerifier {
+            fn verify_server_cert(
+                &self,
+                _end_entity: &Certificate,
+                _intermediates: &[Certificate],
+                _server_name: &ServerName,
+                _scts: &mut dyn Iterator<Item = &[u8]>,
+                _ocsp_response: &[u8],
+                _now: SystemTime,
+            ) -> std::result::Result<ServerCertVerified, Error> {
+                Ok(ServerCertVerified::assertion())
+            }
+        }
+        config
+            .dangerous()
+            .set_certificate_verifier(Arc::new(AcceptAllVerifier));
+
+        let connector = tokio_postgres_rustls::MakeRustlsConnect::new(config);
         let (client, connection) = tokio_postgres::connect(url, connector)
             .await
             .map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
