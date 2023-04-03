@@ -40,7 +40,10 @@ use tracing::{info, warn};
 
 const WAIT_FOR_TX_TIMEOUT: Duration = Duration::from_secs(15);
 /// The maximum gas per transaction.
+/// FIXME
 pub const MAX_GAS: u64 = 2_000_000;
+
+pub const GAS_UNIT_FOR_TRANSFER: u64 = 10_000;
 
 // note: clippy is confused about this being dead - it appears to only be used in cfg(test), but
 // adding #[cfg(test)] causes other targets to fail
@@ -258,15 +261,15 @@ pub fn make_transfer_sui_transaction(
     amount: Option<u64>,
     sender: SuiAddress,
     keypair: &AccountKeyPair,
-    gas_price: Option<u64>,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     let data = TransactionData::new_transfer_sui(
         recipient,
         sender,
         amount,
         gas_object,
-        MAX_GAS,
-        gas_price.unwrap_or(DUMMY_GAS_PRICE),
+        gas_price * GAS_UNIT_FOR_TRANSFER,
+        gas_price,
     );
     to_sender_signed_transaction(data, keypair)
 }
@@ -300,15 +303,17 @@ pub fn make_transfer_object_transaction(
     sender: SuiAddress,
     keypair: &AccountKeyPair,
     recipient: SuiAddress,
-    gas_price: Option<u64>,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     let data = TransactionData::new_transfer(
         recipient,
         object_ref,
         sender,
         gas_object,
-        MAX_GAS,
-        gas_price.unwrap_or(DUMMY_GAS_PRICE),
+        gas_price * GAS_UNIT_FOR_TRANSFER,
+        gas_price,
+        // MAX_GAS,
+        // gas_price.unwrap_or(DUMMY_GAS_PRICE),
     );
     to_sender_signed_transaction(data, keypair)
 }

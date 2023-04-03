@@ -102,6 +102,7 @@ async fn create_txes(
     keypair: &AccountKeyPair,
     gas_objects: &[Object],
     configs: &NetworkConfig,
+    gas_price: u64,
 ) -> BTreeMap<CommonTransactionCosts, VerifiedTransaction> {
     let mut ret = BTreeMap::new();
     let mut gas_objects = gas_objects.to_vec().clone();
@@ -127,7 +128,7 @@ async fn create_txes(
         None,
         sender,
         keypair,
-        None,
+        gas_price,
     );
     let partial_sui_coin_tx = make_transfer_sui_transaction(
         gas_objects.pop().unwrap().compute_object_reference(),
@@ -135,7 +136,7 @@ async fn create_txes(
         Some(100),
         sender,
         keypair,
-        None,
+        gas_price,
     );
     ret.insert(
         CommonTransactionCosts::TransferWholeSuiCoin,
@@ -155,7 +156,7 @@ async fn create_txes(
         sender,
         keypair,
         SuiAddress::default(),
-        None,
+        gas_price,
     );
 
     ret.insert(CommonTransactionCosts::TransferWholeCoin, whole_coin_tx);
@@ -178,6 +179,8 @@ async fn create_txes(
                 gas_objects.pop().unwrap().compute_object_reference(),
             )),
         ],
+        10_000,
+        gas_price,
     );
     ret.insert(CommonTransactionCosts::MergeCoin, merge_tx);
 
@@ -264,12 +267,18 @@ async fn run_actual_costs(
     // Get the authority configs and spawn them. Note that it is important to not drop
     // the handles (or the authorities will stop).
     let (configs, gas_objects) = test_authority_configs_with_objects(gas_objects);
-    let _ = spawn_test_authorities(&configs).await;
+    let authorities = spawn_test_authorities(&configs).await;
+    let rgp = authorities
+        .get(0)
+        .unwrap()
+        .with(|sui_node| sui_node.state().reference_gas_price_for_testing())
+        .unwrap();
+
     // Publish the move package to all authorities and get the new package ref.
     tokio::task::yield_now().await;
     tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-    let tx_map = create_txes(sender, &keypair, &gas_objects, &configs).await;
+    let tx_map = create_txes(sender, &keypair, &gas_objects, &configs, rgp).await;
     for (tx_type, tx) in tx_map {
         let gas_used = if tx_type.is_shared_object_tx() {
             submit_shared_object_transaction(tx, &configs.net_addresses())

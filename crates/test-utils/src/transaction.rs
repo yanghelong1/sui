@@ -43,14 +43,14 @@ use crate::messages::{
 
 const GAS_BUDGET_IN_UNIT: u64 = 200_000_000;
 
-pub fn make_publish_package(gas_object: Object, path: PathBuf) -> VerifiedTransaction {
+pub fn make_publish_package(gas_object: Object, path: PathBuf, gas_price: u64) -> VerifiedTransaction {
     let (sender, keypair) = deterministic_random_account_key();
     create_publish_move_package_transaction(
         gas_object.compute_object_reference(),
         path,
         sender,
         &keypair,
-        None,
+        gas_price,
     )
 }
 

@@ -5,7 +5,6 @@ use crate::authority::authority_tests::{send_consensus, send_consensus_no_execut
 use crate::authority::{AuthorityState, EffectsNotifyRead};
 use crate::authority_aggregator::authority_aggregator_tests::{
     create_object_move_transaction, do_cert, do_transaction, extract_cert, get_latest_ref,
-    transfer_object_move_transaction,
 };
 use crate::authority_server::{ValidatorService, MAX_PER_OBJECT_EXECUTION_QUEUE_LENGTH};
 use crate::safe_client::SafeClient;
@@ -27,6 +26,37 @@ use sui_types::object::{Object, Owner};
 use test_utils::messages::{make_counter_create_transaction, make_counter_increment_transaction};
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::time::{sleep, timeout};
+
+pub fn transfer_object_move_transaction(
+    src: SuiAddress,
+    secret: &dyn Signer<Signature>,
+    dest: SuiAddress,
+    object_ref: ObjectRef,
+    framework_obj_id: ObjectID,
+    gas_object_ref: ObjectRef,
+    gas_price: u64,
+) -> VerifiedTransaction {
+    let args = vec![
+        CallArg::Object(ObjectArg::ImmOrOwnedObject(object_ref)),
+        CallArg::Pure(bcs::to_bytes(&AccountAddress::from(dest)).unwrap()),
+    ];
+
+    to_sender_signed_transaction(
+        TransactionData::new_move_call(
+            src,
+            framework_obj_id,
+            ident_str!("object_basics").to_owned(),
+            ident_str!("transfer").to_owned(),
+            Vec::new(),
+            gas_object_ref,
+            args,
+            10_000,
+            gas_price,
+        )
+        .unwrap(),
+        secret,
+    )
+}
 
 #[allow(dead_code)]
 async fn wait_for_certs(
@@ -304,6 +334,11 @@ async fn test_transaction_manager() {
         .iter()
         .map(|a| &aggregator.authority_clients[&a.name])
         .collect();
+    let rgp = authorities
+        .get(0)
+        .unwrap()
+        .reference_gas_price_for_testing()
+        .unwrap();
 
     // ---- Create an owned object and a shared counter.
 
@@ -313,7 +348,7 @@ async fn test_transaction_manager() {
     // Initialize an object owned by 1st account.
     let (addr1, key1): &(_, AccountKeyPair) = &accounts[0];
     let gas_ref = get_latest_ref(authority_clients[0], gas_objects[0][0].id()).await;
-    let tx1 = create_object_move_transaction(*addr1, key1, *addr1, 100, package, gas_ref);
+    let tx1 = create_object_move_transaction(*addr1, key1, *addr1, 100, package, gas_ref, rgp);
     let (cert, effects1) =
         execute_owned_on_first_three_authorities(&authority_clients, &aggregator.committee, &tx1)
             .await;
@@ -322,7 +357,7 @@ async fn test_transaction_manager() {
 
     // Initialize a shared counter, re-using gas_ref_0 so it has to execute after tx1.
     let gas_ref = get_latest_ref(authority_clients[0], gas_objects[0][0].id()).await;
-    let tx2 = make_counter_create_transaction(gas_ref, package, *addr1, key1, None);
+    let tx2 = make_counter_create_transaction(gas_ref, package, *addr1, key1, rgp);
     let (cert, effects2) =
         execute_owned_on_first_three_authorities(&authority_clients, &aggregator.committee, &tx2)
             .await;
@@ -361,6 +396,7 @@ async fn test_transaction_manager() {
             owned_object_ref,
             package,
             gas_ref,
+            rgp,
         );
         let (cert, effects) = execute_owned_on_first_three_authorities(
             &authority_clients,

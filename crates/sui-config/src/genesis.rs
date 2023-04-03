@@ -150,6 +150,10 @@ impl Genesis {
         self.sui_system_object().get_current_epoch_committee()
     }
 
+    pub fn reference_gas_price(&self) -> u64 {
+        self.sui_system_object().reference_gas_price()
+    }
+
     // TODO: No need to return SuiResult.
     pub fn committee(&self) -> SuiResult<Committee> {
         Ok(self.committee_with_network().committee)

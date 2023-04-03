@@ -51,6 +51,7 @@ use thiserror::Error;
 use tracing::trace;
 
 // TODO: use RGP instead.
+// FIXME
 pub const DUMMY_GAS_PRICE: u64 = 1;
 
 const BLOCKED_MOVE_FUNCTIONS: [(ObjectID, &str, &str); 0] = [];
@@ -1109,28 +1110,28 @@ impl TransactionData {
         })
     }
 
-    pub fn new_move_call_with_dummy_gas_price(
-        sender: SuiAddress,
-        package: ObjectID,
-        module: Identifier,
-        function: Identifier,
-        type_arguments: Vec<TypeTag>,
-        gas_payment: ObjectRef,
-        arguments: Vec<CallArg>,
-        gas_budget: u64,
-    ) -> anyhow::Result<Self> {
-        Self::new_move_call(
-            sender,
-            package,
-            module,
-            function,
-            type_arguments,
-            gas_payment,
-            arguments,
-            gas_budget,
-            DUMMY_GAS_PRICE,
-        )
-    }
+    // pub fn new_move_call_with_dummy_gas_price(
+    //     sender: SuiAddress,
+    //     package: ObjectID,
+    //     module: Identifier,
+    //     function: Identifier,
+    //     type_arguments: Vec<TypeTag>,
+    //     gas_payment: ObjectRef,
+    //     arguments: Vec<CallArg>,
+    //     gas_budget: u64,
+    // ) -> anyhow::Result<Self> {
+    //     Self::new_move_call(
+    //         sender,
+    //         package,
+    //         module,
+    //         function,
+    //         type_arguments,
+    //         gas_payment,
+    //         arguments,
+    //         gas_budget,
+    //         DUMMY_GAS_PRICE,
+    //     )
+    // }
 
     pub fn new_move_call(
         sender: SuiAddress,
@@ -1140,7 +1141,7 @@ impl TransactionData {
         type_arguments: Vec<TypeTag>,
         gas_payment: ObjectRef,
         arguments: Vec<CallArg>,
-        gas_budget: u64,
+        gas_unit: u64,
         gas_price: u64,
     ) -> anyhow::Result<Self> {
         let pt = {
@@ -1152,7 +1153,7 @@ impl TransactionData {
             sender,
             vec![gas_payment],
             pt,
-            gas_budget,
+            gas_unit * gas_price,
             gas_price,
         ))
     }

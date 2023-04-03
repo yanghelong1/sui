@@ -108,6 +108,11 @@ async fn reconfig_with_revert_end_to_end_test() {
     let gas2 = &objects[1];
     let authorities = spawn_test_authorities(&configs).await;
     let registry = Registry::new();
+    let rgp = authorities
+        .get(0)
+        .unwrap()
+        .with(|sui_node| sui_node.state().reference_gas_price_for_testing())
+        .unwrap();
 
     // gas1 transaction is committed
     let tx = make_transfer_sui_transaction(
@@ -116,7 +121,7 @@ async fn reconfig_with_revert_end_to_end_test() {
         None,
         sender,
         &keypair,
-        None,
+        rgp,
     );
     let net = AuthorityAggregator::new_from_local_system_state(
         &authorities[0].with(|node| node.state().db()),
@@ -143,7 +148,7 @@ async fn reconfig_with_revert_end_to_end_test() {
         None,
         sender,
         &keypair,
-        None,
+        rgp,
     );
     let cert = net
         .process_transaction(tx.clone())
@@ -404,7 +409,7 @@ async fn test_validator_resign_effects() {
         None,
         sender,
         &keypair,
-        None,
+        rgp,
     );
     let registry = Registry::new();
     let mut net = AuthorityAggregator::new_from_local_system_state(
@@ -536,6 +541,7 @@ async fn test_inactive_validator_pool_read() {
         .collect();
 
     let authorities = spawn_test_authorities(&init_configs).await;
+    let rgp = init_configs.genesis.reference_gas_price();
 
     let staking_pool_id = authorities[0].with(|node| {
         node.state()
@@ -561,7 +567,7 @@ async fn test_inactive_validator_pool_read() {
         assert_eq!(validator.sui_address, address);
     });
 
-    let tx_data = TransactionData::new_move_call_with_dummy_gas_price(
+    let tx_data = TransactionData::new_move_call(
         address,
         SuiSystem::ID,
         ident_str!("sui_system").to_owned(),
@@ -573,7 +579,8 @@ async fn test_inactive_validator_pool_read() {
             initial_shared_version: SUI_SYSTEM_STATE_OBJECT_SHARED_VERSION,
             mutable: true,
         })],
-        GAS_BUDGET,
+        20_000,
+        rgp,
     )
     .unwrap();
     let transaction = to_sender_signed_transaction(tx_data, &leaving_validator_account_key);
@@ -1023,8 +1030,10 @@ async fn execute_add_validator_candidate_tx(
 ) -> CertifiedTransactionEffects {
     let sender = val.sui_address;
     let proof_of_possession = generate_proof_of_possession(node_config.protocol_key_pair(), sender);
-
-    let candidate_tx_data = TransactionData::new_move_call_with_dummy_gas_price(
+    let rgp = authorities[0]
+        .with(|node| node.state().reference_gas_price_for_testing())
+        .unwrap;
+    let candidate_tx_data = TransactionData::new_move_call(
         sender,
         SuiSystem::ID,
         ident_str!("sui_system").to_owned(),
@@ -1052,7 +1061,8 @@ async fn execute_add_validator_candidate_tx(
             CallArg::Pure(bcs::to_bytes(&1u64).unwrap()), // gas_price
             CallArg::Pure(bcs::to_bytes(&0u64).unwrap()), // commission_rate
         ],
-        GAS_BUDGET,
+        20_000,
+        rgp,
     )
     .unwrap();
     let transaction =
@@ -1074,7 +1084,9 @@ async fn execute_join_committee_txes(
     assert_eq!(node_config.protocol_public_key(), val.sui_pubkey_bytes());
     let mut effects_ret = vec![];
     let sender = val.sui_address;
-
+    let rgp = authorities[0]
+        .with(|node| node.state().reference_gas_price_for_testing())
+        .unwrap;
     // Step 1: Add the new node as a validator candidate.
     let effects =
         execute_add_validator_candidate_tx(authorities, gas_objects[0], node_config, val).await;
@@ -1082,7 +1094,7 @@ async fn execute_join_committee_txes(
     effects_ret.push(effects);
 
     // Step 2: Give the candidate enough stake.
-    let stake_tx_data = TransactionData::new_move_call_with_dummy_gas_price(
+    let stake_tx_data = TransactionData::new_move_call(
         sender,
         SuiSystem::ID,
         ident_str!("sui_system").to_owned(),
@@ -1098,7 +1110,8 @@ async fn execute_join_committee_txes(
             CallArg::Object(ObjectArg::ImmOrOwnedObject(stake)),
             CallArg::Pure(bcs::to_bytes(&sender).unwrap()),
         ],
-        GAS_BUDGET,
+        20_000,
+        rgp,
     )
     .unwrap();
     let transaction = to_sender_signed_transaction(stake_tx_data, node_config.account_key_pair());
@@ -1110,7 +1123,7 @@ async fn execute_join_committee_txes(
     effects_ret.push(effects);
 
     // Step 3: Convert the candidate to an active valdiator.
-    let activation_tx_data = TransactionData::new_move_call_with_dummy_gas_price(
+    let activation_tx_data = TransactionData::new_move_call(
         sender,
         SuiSystem::ID,
         ident_str!("sui_system").to_owned(),
@@ -1122,7 +1135,8 @@ async fn execute_join_committee_txes(
             initial_shared_version: SUI_SYSTEM_STATE_OBJECT_SHARED_VERSION,
             mutable: true,
         })],
-        GAS_BUDGET,
+        20_000,
+        rgp,
     )
     .unwrap();
     let transaction =
@@ -1141,7 +1155,10 @@ async fn execute_leave_committee_tx(
     gas: ObjectRef,
     node_config: &NodeConfig,
 ) -> CertifiedTransactionEffects {
-    let tx_data = TransactionData::new_move_call_with_dummy_gas_price(
+    let rgp = authorities[0]
+        .with(|node| node.state().reference_gas_price_for_testing())
+        .unwrap;
+    let tx_data = TransactionData::new_move_call(
         node_config.sui_address(),
         SuiSystem::ID,
         ident_str!("sui_system").to_owned(),
@@ -1153,7 +1170,8 @@ async fn execute_leave_committee_tx(
             initial_shared_version: SUI_SYSTEM_STATE_OBJECT_SHARED_VERSION,
             mutable: true,
         })],
-        GAS_BUDGET,
+        20_000,
+        rgp,
     )
     .unwrap();
 

@@ -36,7 +36,7 @@ pub const CONSENSUS_DB_NAME: &str = "consensus_db";
 pub const FULL_NODE_DB_PATH: &str = "full_node_db";
 
 // TODO: change this to a more realistic value like 1000.
-const DEFAULT_GAS_PRICE: u64 = 1;
+const DEFAULT_GAS_PRICE: u64 = 10;
 const DEFAULT_COMMISSION_RATE: u64 = 0;
 
 pub fn sui_config_dir() -> Result<PathBuf, anyhow::Error> {

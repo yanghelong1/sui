@@ -1777,8 +1777,9 @@ async fn test_signature_flag() -> Result<(), anyhow::Error> {
 #[sim_test]
 async fn test_execute_signed_tx() -> Result<(), anyhow::Error> {
     let mut test_cluster = TestClusterBuilder::new().build().await?;
+    // let rgp = test_cluster.get_reference_gas_price().await;
     let context = &mut test_cluster.wallet;
-    let mut txns = make_transactions_with_wallet_context(context, 1).await;
+    let mut txns = make_transactions_with_wallet_context(context, 1, 10000, None).await;
     let txn = txns.swap_remove(0);
 
     let (tx_data, signatures) = txn.to_tx_bytes_and_signatures();

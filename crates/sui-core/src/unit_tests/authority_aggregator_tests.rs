@@ -67,35 +67,6 @@ pub fn transfer_coin_transaction(
     )
 }
 
-pub fn transfer_object_move_transaction(
-    src: SuiAddress,
-    secret: &dyn Signer<Signature>,
-    dest: SuiAddress,
-    object_ref: ObjectRef,
-    framework_obj_id: ObjectID,
-    gas_object_ref: ObjectRef,
-) -> VerifiedTransaction {
-    let args = vec![
-        CallArg::Object(ObjectArg::ImmOrOwnedObject(object_ref)),
-        CallArg::Pure(bcs::to_bytes(&AccountAddress::from(dest)).unwrap()),
-    ];
-
-    to_sender_signed_transaction(
-        TransactionData::new_move_call_with_dummy_gas_price(
-            src,
-            framework_obj_id,
-            ident_str!("object_basics").to_owned(),
-            ident_str!("transfer").to_owned(),
-            Vec::new(),
-            gas_object_ref,
-            args,
-            MAX_GAS_BUDGET_FOR_TESTING,
-        )
-        .unwrap(),
-        secret,
-    )
-}
-
 pub fn create_object_move_transaction(
     src: SuiAddress,
     secret: &dyn Signer<Signature>,
@@ -103,6 +74,7 @@ pub fn create_object_move_transaction(
     value: u64,
     package_id: ObjectID,
     gas_object_ref: ObjectRef,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     // When creating an object_basics object, we provide the value (u64) and address which will own the object
     let arguments = vec![
@@ -111,7 +83,7 @@ pub fn create_object_move_transaction(
     ];
 
     to_sender_signed_transaction(
-        TransactionData::new_move_call_with_dummy_gas_price(
+        TransactionData::new_move_call(
             src,
             package_id,
             ident_str!("object_basics").to_owned(),
@@ -119,7 +91,8 @@ pub fn create_object_move_transaction(
             Vec::new(),
             gas_object_ref,
             arguments,
-            MAX_GAS_BUDGET_FOR_TESTING,
+            20_000,
+            gas_price,
         )
         .unwrap(),
         secret,
@@ -711,7 +684,7 @@ async fn test_handle_transaction_panic() {
         None,
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
 
     // Non-quorum of effects without a retryable majority indicating a safety violation
@@ -781,7 +754,7 @@ async fn test_handle_transaction_response() {
         None,
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let tx2 = make_transfer_sui_transaction(
         gas_object,
@@ -789,7 +762,7 @@ async fn test_handle_transaction_response() {
         Some(1),
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let package_not_found_error = SuiError::UserInputError {
         error: UserInputError::DependentPackageNotFound {
@@ -1354,7 +1327,7 @@ async fn test_handle_conflicting_transaction_response() {
         Some(1),
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let conflicting_tx2 = make_transfer_sui_transaction(
         conflicting_object,
@@ -1362,7 +1335,7 @@ async fn test_handle_conflicting_transaction_response() {
         Some(2),
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let conflicting_error = SuiError::ObjectLockConflict {
         obj_ref: conflicting_object,
@@ -1519,7 +1492,7 @@ async fn test_handle_conflicting_transaction_response() {
         Some(3),
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let conflicting_error_2 = SuiError::ObjectLockConflict {
         obj_ref: conflicting_object,
@@ -1569,7 +1542,7 @@ async fn test_handle_conflicting_transaction_response() {
         Some(3),
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
     let conflicting_error_2 = SuiError::ObjectLockConflict {
         obj_ref: conflicting_object,
@@ -1794,7 +1767,7 @@ async fn test_handle_overload_response() {
         None,
         sender,
         &sender_kp,
-        None,
+        666, // this is a dummy value which does not matter
     );
 
     let overload_error = SuiError::TooManyTransactionsPendingExecution {

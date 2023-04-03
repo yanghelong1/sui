@@ -146,16 +146,30 @@ pub async fn get_account_and_gas_objects(
 pub async fn make_transactions_with_wallet_context(
     context: &mut WalletContext,
     max_txn_num: usize,
+    gas_unit: u64,
+    gas_price: Option<u64>,
 ) -> Vec<VerifiedTransaction> {
     let recipient = get_key_pair::<AuthorityKeyPair>().0;
     let accounts_and_objs = get_account_and_gas_objects(context).await;
     let mut res = Vec::with_capacity(max_txn_num);
+
+    let gas_price = match gas_price {
+        Some(p) => p,
+        None => {
+            let client = context.get_client().await.unwrap();
+            client
+                .governance_api()
+                .get_reference_gas_price()
+                .await
+                .unwrap()
+        }
+    };
     for (address, objs) in &accounts_and_objs {
         for obj in objs {
             if res.len() >= max_txn_num {
                 return res;
             }
-            let data = TransactionData::new_transfer_sui_with_dummy_gas_price(
+            let data = TransactionData::new_transfer_sui(
                 recipient,
                 *address,
                 Some(2),
@@ -163,7 +177,9 @@ pub async fn make_transactions_with_wallet_context(
                     .into_object()
                     .expect("Gas coin could not be converted to object ref.")
                     .object_ref(),
-                MAX_GAS,
+                gas_price * gas_unit,
+                gas_price,
+                // MAX_GAS,
             );
             let tx = to_sender_signed_transaction(
                 data,
@@ -175,6 +191,7 @@ pub async fn make_transactions_with_wallet_context(
     res
 }
 
+// FIXME remove this
 pub async fn make_transactions_with_wallet_context_and_budget(
     context: &mut WalletContext,
     max_txn_num: usize,
@@ -334,15 +351,16 @@ pub fn create_publish_move_package_transaction(
     path: PathBuf,
     sender: SuiAddress,
     keypair: &AccountKeyPair,
-    gas_price: Option<u64>,
+    gas_unit: u64,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     create_publish_move_package_transaction_with_budget(
         gas_object_ref,
         path,
         sender,
         keypair,
+        gas_unit,
         gas_price,
-        MAX_GAS,
     )
 }
 
@@ -352,7 +370,8 @@ pub fn create_publish_move_package_transaction_with_budget(
     path: PathBuf,
     sender: SuiAddress,
     keypair: &AccountKeyPair,
-    gas_price: Option<u64>,
+    gas_unit: u64,
+    gas_price: u64,
     gas_budget: u64,
 ) -> VerifiedTransaction {
     let build_config = BuildConfig::new_for_testing();
@@ -366,8 +385,8 @@ pub fn create_publish_move_package_transaction_with_budget(
         gas_object_ref,
         all_module_bytes,
         dependencies,
-        gas_budget,
-        gas_price.unwrap_or(DUMMY_GAS_PRICE),
+        gas_unit * gas_price,
+        gas_price,
     );
     to_sender_signed_transaction(data, keypair)
 }
@@ -390,7 +409,7 @@ pub fn make_counter_create_transaction(
     package_id: ObjectID,
     sender: SuiAddress,
     keypair: &AccountKeyPair,
-    gas_price: Option<u64>,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     let data = TransactionData::new_move_call(
         sender,
@@ -400,8 +419,8 @@ pub fn make_counter_create_transaction(
         Vec::new(),
         gas_object,
         vec![],
-        MAX_GAS,
-        gas_price.unwrap_or(DUMMY_GAS_PRICE),
+        10_000,
+        gas_price,
     )
     .unwrap();
     to_sender_signed_transaction(data, keypair)
@@ -485,6 +504,8 @@ pub fn move_transaction_with_type_tags(
     package_id: ObjectID,
     type_args: &[TypeTag],
     arguments: Vec<CallArg>,
+    gas_unit: u64,
+    gas_price: u64,
 ) -> VerifiedTransaction {
     let (sender, keypair) = deterministic_random_account_key();
 

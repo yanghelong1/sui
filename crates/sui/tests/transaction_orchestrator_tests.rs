@@ -41,7 +41,7 @@ async fn test_blocking_execution() -> Result<(), anyhow::Error> {
     .unwrap();
 
     let txn_count = 4;
-    let mut txns = make_transactions_with_wallet_context(context, txn_count).await;
+    let mut txns = make_transactions_with_wallet_context(context, txn_count, 10000, None).await;
     assert!(
         txns.len() >= txn_count,
         "Expect at least {} txns. Do we generate enough gas objects during genesis?",
@@ -108,7 +108,7 @@ async fn test_fullnode_wal_log() -> Result<(), anyhow::Error> {
 
     let txn_count = 2;
     let context = &mut test_cluster.wallet;
-    let mut txns = make_transactions_with_wallet_context(context, txn_count).await;
+    let mut txns = make_transactions_with_wallet_context(context, txn_count, 10000, None).await;
     assert!(
         txns.len() >= txn_count,
         "Expect at least {} txns. Do we generate enough gas objects during genesis?",
