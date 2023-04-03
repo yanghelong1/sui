@@ -9,7 +9,6 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use cached::proc_macro::once;
 use diesel::dsl::max;
-use diesel::pg::PgConnection;
 use diesel::query_builder::AsQuery;
 use diesel::sql_types::{BigInt, VarChar};
 use diesel::upsert::excluded;
@@ -17,7 +16,7 @@ use diesel::QueryDsl;
 use diesel::{ExpressionMethods, PgArrayExpressionMethods};
 use diesel::{OptionalExtension, QueryableByName};
 use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fastcrypto::hash::Digest;
 use fastcrypto::traits::ToFromBytes;
 use move_bytecode_utils::module_cache::SyncModuleCache;
@@ -137,7 +136,8 @@ impl PgIndexerStore {
             .filter(objects_history::object_id.eq(object_id.to_string()))
             .filter(objects_history::version.eq(version.value() as i64))
             // pick data from checkpoint if available
-                .order(objects_history::checkpoint.desc()).first::<Object>(conn)
+            .order(objects_history::checkpoint.desc())
+            .first::<Object>(conn)
             .scope_boxed())
         .context("Failed reading Object from PostgresDB");
         match pg_object {
@@ -647,32 +647,35 @@ impl IndexerStore for PgIndexerStore {
     }
 
     // NOTE(gegaowp): now only supports query by address owner
-    fn query_latest_objects(
+    async fn query_latest_objects(
         &self,
         filter: SuiObjectDataFilter,
         cursor: Option<ObjectID>,
         limit: usize,
     ) -> Result<Vec<ObjectRead>, IndexerError> {
-        let objects = read_only!(&self.cp, |conn| {
-            let columns = vec![
-                "epoch",
-                "checkpoint",
-                "object_id",
-                "version",
-                "object_digest",
-                "owner_type",
-                "owner_address",
-                "initial_shared_version",
-                "previous_transaction",
-                "object_type",
-                "object_status",
-                "has_public_transfer",
-                "storage_rebate",
-                "bcs",
-            ];
-            diesel::sql_query(filter.to_latest_objects_sql(cursor, limit, columns))
-                .get_results::<Object>(conn)
-        })?;
+        let columns = vec![
+            "epoch",
+            "checkpoint",
+            "object_id",
+            "version",
+            "object_digest",
+            "owner_type",
+            "owner_address",
+            "initial_shared_version",
+            "previous_transaction",
+            "object_type",
+            "object_status",
+            "has_public_transfer",
+            "storage_rebate",
+            "bcs",
+        ];
+
+        let objects = read_only!(&self.cp, |conn| diesel::sql_query(
+            filter.to_latest_objects_sql(cursor, limit, columns)
+        )
+        .get_results::<Object>(conn)
+        .scope_boxed())?;
+
         objects
             .into_iter()
             .map(|object| object.try_into_object_read(&self.module_cache))
@@ -1122,6 +1125,7 @@ impl IndexerStore for PgIndexerStore {
                 tx_object_changes.changed_objects,
                 deleted_objects,
             )
+            .await
         }
         .scope_boxed())
     }
@@ -1186,7 +1190,7 @@ impl IndexerStore for PgIndexerStore {
                 .iter()
                 .map(|deleted_object| deleted_object.clone().into())
                 .collect();
-            persist_transaction_object_changes(conn, mutated_objects, deleted_objects)?;
+            persist_transaction_object_changes(conn, mutated_objects, deleted_objects).await?;
 
             // Commit indexed addresses
             for addresses_chunk in addresses.chunks(PG_COMMIT_CHUNK_SIZE) {
@@ -1422,8 +1426,8 @@ WHERE e1.epoch = e2.epoch
     }
 }
 
-fn persist_transaction_object_changes(
-    conn: &mut PgConnection,
+async fn persist_transaction_object_changes(
+    conn: &mut AsyncPgConnection,
     mutated_objects: Vec<Object>,
     deleted_objects: Vec<Object>,
 ) -> Result<usize, IndexerError> {
@@ -1443,6 +1447,7 @@ fn persist_transaction_object_changes(
         let insert_update_query = compose_object_bulk_insert_update_query(&mutated_object_group);
         diesel::sql_query(insert_update_query)
             .execute(conn)
+            .await
             .map_err(|e| {
                 IndexerError::PostgresWriteError(format!(
                     "Failed writing mutated objects to PostgresDB with error: {:?}",
@@ -1464,6 +1469,7 @@ fn persist_transaction_object_changes(
                 objects::object_status.eq(excluded(objects::object_status)),
             ))
             .execute(conn)
+            .await
             .map_err(|e| {
                 IndexerError::PostgresWriteError(format!(
                     "Failed writing deleted objects to PostgresDB with error: {:?}",

@@ -69,7 +69,7 @@ pub trait IndexerStore {
         limit: usize,
     ) -> Result<Vec<ObjectRead>, IndexerError>;
 
-    fn get_total_transaction_number_from_checkpoints(&self) -> Result<i64, IndexerError>;
+    async fn get_total_transaction_number_from_checkpoints(&self) -> Result<i64, IndexerError>;
 
     // TODO: combine all get_transaction* methods
     async fn get_transaction_by_digest(&self, tx_digest: &str)

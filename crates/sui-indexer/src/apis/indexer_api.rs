@@ -268,10 +268,14 @@ impl<S: IndexerStore> IndexerApi<S> {
             None => Ok((address, None)),
         }?;
         let options = options.unwrap_or_default();
-        let limit = validate_limit(limit, QUERY_MAX_RESULT_LIMIT_OBJECTS).await?;
+        let limit = validate_limit(limit, QUERY_MAX_RESULT_LIMIT_OBJECTS)?;
 
         // NOTE: fetch one more object to check if there is next page
-        let mut objects = self.state.query_latest_objects(filter, cursor, limit + 1)?;
+        let mut objects = self
+            .state
+            .query_latest_objects(filter, cursor, limit + 1)
+            .await?;
+
         let has_next_page = objects.len() > limit;
         objects.truncate(limit);
         let next_cursor = objects
