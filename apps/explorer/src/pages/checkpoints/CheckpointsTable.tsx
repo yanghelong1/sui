@@ -41,7 +41,8 @@ export function CheckpointsTable({
     );
 
     const count = useMemo(() => {
-        if (maxCursor && initialCursor) return +initialCursor - +maxCursor;
+        if (maxCursor && initialCursor)
+            return Number(initialCursor) - Number(maxCursor);
         return Number(countQuery.data ?? 0);
     }, [countQuery.data, initialCursor, maxCursor]);
 
@@ -50,8 +51,10 @@ export function CheckpointsTable({
         () =>
             rpc.getCheckpoints({
                 limit:
-                    cursor && maxCursor && +cursor - +limit < +maxCursor
-                        ? +cursor - +maxCursor
+                    cursor &&
+                    maxCursor &&
+                    Number(cursor) - Number(limit) < Number(maxCursor)
+                        ? Number(cursor) - Number(maxCursor)
                         : limit,
                 descendingOrder: true,
                 cursor,

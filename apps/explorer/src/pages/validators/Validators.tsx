@@ -61,10 +61,10 @@ export function validatorsTableData(
                             ? rollingAverageApys?.[validator.suiAddress]
                             : null,
                     nextEpochGasPrice: validator.nextEpochGasPrice,
-                    commission: +validator.commissionRate / 100,
+                    commission: Number(validator.commissionRate) / 100,
                     img: img,
                     address: validator.suiAddress,
-                    lastReward: +event?.pool_staking_reward || 0,
+                    lastReward: Number(event?.pool_staking_reward) || 0,
                     atRisk: atRiskValidators.some(
                         ([address]) => address === validator.suiAddress
                     ),
@@ -212,7 +212,7 @@ function ValidatorPageResult() {
         const validators = data.activeValidators;
 
         return validators.reduce(
-            (acc, cur) => acc + +cur.stakingPoolSuiBalance,
+            (acc, cur) => acc + Number(cur.stakingPoolSuiBalance),
             0
         );
     }, [data]);
@@ -233,7 +233,7 @@ function ValidatorPageResult() {
         let totalRewards = 0;
 
         validatorEvents.forEach(({ parsedJson }) => {
-            totalRewards += +parsedJson!.pool_staking_reward;
+            totalRewards += Number(parsedJson!.pool_staking_reward);
         });
 
         return totalRewards;

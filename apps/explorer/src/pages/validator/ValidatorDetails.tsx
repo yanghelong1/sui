@@ -37,7 +37,7 @@ function ValidatorDetails() {
             validatorEvents,
             id
         )?.pool_staking_reward;
-        return +rewards || 0;
+        return Number(rewards) || 0;
     }, [id, validatorEvents]);
 
     if (isLoading || validatorsEventsLoading || validatorsApysLoading) {
