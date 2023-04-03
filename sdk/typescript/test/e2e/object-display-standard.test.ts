@@ -32,16 +32,19 @@ describe('Test Object Display Standard', () => {
       }),
     );
     expect(display).toEqual({
-      age: '10',
-      buyer: toolbox.address(),
-      creator: 'Chris',
-      description: `Unique Boar from the Boars collection with First Boar and ${boarId}`,
-      img_url: 'https://get-a-boar.com/first.png',
-      name: 'First Boar',
-      price: '',
-      project_url: 'https://get-a-boar.com/',
-      full_url: 'https://get-a-boar.fullurl.com/',
-      escape_syntax: '{name}',
+      data: {
+        age: '10',
+        buyer: toolbox.address(),
+        creator: 'Chris',
+        description: `Unique Boar from the Boars collection with First Boar and ${boarId}`,
+        img_url: 'https://get-a-boar.com/first.png',
+        name: 'First Boar',
+        price: '',
+        project_url: 'https://get-a-boar.com/',
+        full_url: 'https://get-a-boar.fullurl.com/',
+        escape_syntax: '{name}',
+      },
+      error: null,
     });
   });
 
@@ -55,6 +58,6 @@ describe('Test Object Display Standard', () => {
         options: { showDisplay: true },
       }),
     );
-    expect(display).toEqual(undefined);
+    expect(display?.data).toEqual(null);
   });
 });
