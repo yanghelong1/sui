@@ -2,6 +2,8 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::sui_serde::BigInt;
+use crate::sui_serde::Readable;
 use crate::{
     error::{ExecutionError, UserInputError, UserInputResult},
     gas_coin::GasCoin,
@@ -14,6 +16,7 @@ use enum_dispatch::enum_dispatch;
 use itertools::MultiUnzip;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use sui_cost_tables::bytecode_tables::GasStatus;
 use sui_protocol_config::ProtocolConfig;
 

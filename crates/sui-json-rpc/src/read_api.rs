@@ -93,7 +93,8 @@ impl ReadApi {
     fn get_checkpoint_internal(&self, id: CheckpointId) -> Result<Checkpoint, Error> {
         Ok(match id {
             CheckpointId::SequenceNumber(seq) => {
-                let verified_summary = self.state.get_verified_checkpoint_by_sequence_number(seq)?;
+                let verified_summary =
+                    self.state.get_verified_checkpoint_by_sequence_number(seq)?;
                 let content = self
                     .state
                     .get_checkpoint_contents(verified_summary.content_digest)?;

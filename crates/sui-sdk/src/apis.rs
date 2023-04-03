@@ -16,7 +16,6 @@ use sui_json_rpc::api::GovernanceReadApiClient;
 use sui_json_rpc::api::{
     CoinReadApiClient, IndexerApiClient, MoveUtilsClient, ReadApiClient, WriteApiClient,
 };
-use sui_json_rpc::api::{CoinReadApiClient, ReadApiClient, WriteApiClient};
 use sui_json_rpc_types::{
     Balance, Checkpoint, CheckpointId, Coin, CoinPage, DelegatedStake,
     DryRunTransactionBlockResponse, DynamicFieldPage, EventFilter, EventPage, ObjectsPage,

@@ -1,12 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::Page;
 use fastcrypto::encoding::Base64;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use serde_with::serde_as;
-
 use sui_types::base_types::TransactionDigest;
 use sui_types::committee::EpochId;
 use sui_types::crypto::AggregateAuthoritySignature;
@@ -18,14 +17,10 @@ use sui_types::messages_checkpoint::{
     CheckpointTimestamp, EndOfEpochData,
 };
 use sui_types::sui_serde::BigInt;
-
-use crate::Page;
-
 pub type CheckpointPage = Page<Checkpoint, BigInt<u64>>;
 
 #[serde_as]
 #[derive(Clone, Debug, JsonSchema, Serialize, Deserialize, PartialEq, Eq)]
-#[serde_as]
 #[serde(rename_all = "camelCase")]
 pub struct Checkpoint {
     /// Checkpoint's epoch ID
@@ -65,7 +60,7 @@ pub struct Checkpoint {
     pub checkpoint_commitments: Vec<CheckpointCommitment>,
     /// Validator Signature
     #[schemars(with = "Base64")]
-    #[serde_as(as = "Readable<Base64, Bytes>")]
+    //#[serde_as(as = "Readable<Base64, Bytes>")]
     pub validator_signature: AggregateAuthoritySignature,
 }
 
