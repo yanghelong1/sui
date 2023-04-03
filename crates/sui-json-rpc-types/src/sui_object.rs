@@ -300,10 +300,20 @@ impl TryFrom<&SuiMoveStruct> for GasCoin {
     fn try_from(move_struct: &SuiMoveStruct) -> Result<Self, Self::Error> {
         match move_struct {
             SuiMoveStruct::WithFields(fields) | SuiMoveStruct::WithTypes { type_: _, fields } => {
-                if let Some(SuiMoveValue::Number(balance)) = fields.get("balance") {
-                    if let Some(SuiMoveValue::UID { id }) = fields.get("id") {
-                        return Ok(GasCoin::new(*id, *balance));
+                match fields.get("balance") {
+                    Some(SuiMoveValue::Number(balance)) => {
+                        if let Some(SuiMoveValue::UID { id }) = fields.get("id") {
+                            return Ok(GasCoin::new(*id, *balance));
+                        }
                     }
+                    Some(SuiMoveValue::String(balance)) => {
+                        if let Ok(balance) = balance.parse::<u64>() {
+                            if let Some(SuiMoveValue::UID { id }) = fields.get("id") {
+                                return Ok(GasCoin::new(*id, balance));
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
             _ => {}
