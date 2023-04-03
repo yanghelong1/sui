@@ -8,6 +8,7 @@ use futures::future::join_all;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use shared_crypto::intent::{Intent, IntentMessage};
+use std::fmt;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -31,6 +32,9 @@ use crate::payload::checkpoint_utils::get_latest_checkpoint_stats;
 use crate::payload::{
     Command, CommandData, DryRun, GetCheckpoints, Payload, ProcessPayload, Processor, SignerInfo,
 };
+
+use super::validation::chunk_entities;
+use super::QueryTransactionBlocks;
 
 pub(crate) const DEFAULT_GAS_BUDGET: u64 = 10_000;
 pub(crate) const DEFAULT_LARGE_GAS_BUDGET: u64 = 100_000_000;
@@ -76,7 +80,7 @@ impl RpcCommandProcessor {
             CommandData::DryRun(ref v) => self.process(v, signer_info).await,
             CommandData::GetCheckpoints(ref v) => self.process(v, signer_info).await,
             CommandData::PaySui(ref v) => self.process(v, signer_info).await,
-            CommandData::QueryTransactions(ref v) => self.process(v, signer_info).await,
+            CommandData::QueryTransactionBlocks(ref v) => self.process(v, signer_info).await,
         }
     }
 
@@ -162,8 +166,8 @@ impl RpcCommandProcessor {
         }
     }
 
-    pub(crate) fn get_addresses(&self) -> &Arc<DashSet<SuiAddress>> {
-        &self.addresses
+    pub(crate) fn get_addresses(&self) -> Arc<DashSet<SuiAddress>> {
+        self.addresses.clone()
     }
 
     pub(crate) fn dump_cache_to_file(&self) {
@@ -175,13 +179,10 @@ impl RpcCommandProcessor {
         write_data_to_file(&addresses, &format!("{}/addresses", &self.data_dir)).unwrap();
     }
 
-    pub(crate) fn load_cache_from_file(&self, cache_type: &str) {
-        let entity_type = CacheType::from_str(cache_type)
-            .unwrap_or_else(|| panic!("Invalid cache type received: {}", cache_type));
-
+    pub(crate) fn load_cache_from_file(&self, cache_type: CacheType) {
         let file_path = format!("{}/{}", &self.data_dir, cache_type);
 
-        match entity_type {
+        match cache_type {
             CacheType::SuiAddress => {
                 let addresses: Vec<SuiAddress> =
                     read_data_from_file(&file_path).expect("Failed to read addresses");
@@ -224,19 +225,26 @@ impl Processor for RpcCommandProcessor {
 
     async fn prepare(&self, config: &LoadTestConfig) -> Result<Vec<Payload>> {
         let clients = self.get_clients().await?;
-        if let CommandData::QueryTransactions(command_data) = &config.command.data {
-            if let Some(true) = command_data.from_file {
-                // TODO: how to generalize for other commands, flexibility beyond addresses
-                self.load_cache_from_file("addresses");
-            }
-        }
-
         let command_payloads = match &config.command.data {
             CommandData::GetCheckpoints(data) => {
                 if !config.divide_tasks {
                     vec![config.command.clone(); config.num_threads]
                 } else {
                     divide_checkpoint_tasks(&clients, data, config.num_threads).await
+                }
+            }
+            CommandData::QueryTransactionBlocks(data) => {
+                self.load_cache_from_file(CacheType::SuiAddress);
+                if !config.divide_tasks {
+                    vec![config.command.clone(); config.num_threads]
+                } else {
+                    divide_query_transaction_blocks_tasks(
+                        &clients,
+                        data,
+                        config.num_threads,
+                        self.get_addresses(),
+                    )
+                    .await
                 }
             }
             _ => vec![config.command.clone(); config.num_threads],
@@ -302,17 +310,16 @@ fn write_data_to_file<T: Serialize>(data: &T, file_path: &str) -> Result<(), any
     Ok(())
 }
 
-enum CacheType {
+pub enum CacheType {
     SuiAddress,
     TransactionDigest,
 }
 
-impl CacheType {
-    fn from_str(entity_type: &str) -> Option<Self> {
-        match entity_type {
-            "addresses" => Some(Self::SuiAddress),
-            "digests" => Some(Self::TransactionDigest),
-            _ => None,
+impl fmt::Display for CacheType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CacheType::SuiAddress => write!(f, "SuiAddress"),
+            CacheType::TransactionDigest => write!(f, "TransactionDigest"),
         }
     }
 }
@@ -368,6 +375,21 @@ async fn divide_checkpoint_tasks(
                 data.record,
             )
         })
+        .collect()
+}
+
+async fn divide_query_transaction_blocks_tasks(
+    clients: &[SuiClient],
+    data: &QueryTransactionBlocks,
+    num_chunks: usize,
+    addresses: Arc<DashSet<SuiAddress>>,
+) -> Vec<Command> {
+    let chunk_size = addresses.len() as u64 / num_chunks as u64;
+    let vec: Vec<SuiAddress> = addresses.iter().map(|x| *x).collect();
+    let chunked = chunk_entities(vec.as_slice(), Some(chunk_size as usize));
+    chunked
+        .iter()
+        .map(|chunk| Command::new_query_transaction_blocks(data.address_type.clone()))
         .collect()
 }
 

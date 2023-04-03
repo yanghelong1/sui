@@ -6,6 +6,7 @@ mod payload;
 
 use anyhow::Result;
 use clap::Parser;
+use payload::AddressQueryType;
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -90,16 +91,10 @@ pub enum ClapCommand {
         #[clap(flatten)]
         common: CommonOptions,
     },
-    #[clap(name = "query-transactions")]
-    QueryTransactions {
-        #[clap(long)]
-        address: Option<String>,
-
-        #[clap(short, long)]
-        address_type: Option<String>,
-
-        #[clap(long)]
-        from_file: Option<bool>,
+    #[clap(name = "query-transaction-blocks")]
+    QueryTransactionBlocks {
+        #[clap(subcommand)]
+        address_type: AddressQueryType,
 
         #[clap(flatten)]
         common: CommonOptions,
@@ -174,13 +169,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             common,
             false,
         ),
-        ClapCommand::QueryTransactions {
+        ClapCommand::QueryTransactionBlocks {
             common,
-            address,
             address_type,
-            from_file,
         } => (
-            Command::new_query_transaction_blocks(address, address_type, from_file),
+            Command::new_query_transaction_blocks(address_type),
             common,
             false,
         ),

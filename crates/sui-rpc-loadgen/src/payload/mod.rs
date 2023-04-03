@@ -10,15 +10,15 @@ mod validation;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use clap::Parser;
 use core::default::Default;
-use std::str::FromStr;
 use std::time::Duration;
 
 use sui_types::messages_checkpoint::CheckpointSequenceNumber;
 
 use crate::load_test::LoadTestConfig;
 pub use rpc_command_processor::RpcCommandProcessor;
-use sui_types::base_types::{ObjectID, SuiAddress};
+use sui_types::base_types::ObjectID;
 
 #[derive(Default, Clone)]
 pub struct SignerInfo {
@@ -90,24 +90,10 @@ impl Command {
         }
     }
 
-    pub fn new_query_transaction_blocks(
-        address: Option<String>,
-        address_type: Option<String>,
-        from_file: Option<bool>,
-    ) -> Self {
-        let address_type = address_type.map(|s| match s.as_str() {
-            "from" => AddressType::FromAddress,
-            "to" => AddressType::ToAddress,
-            _ => panic!("Invalid address type: {}", s),
-        });
-
-        let query_transactions = QueryTransactions {
-            address: address.map(|addr| SuiAddress::from_str(&addr).unwrap()),
-            address_type,
-            from_file,
-        };
+    pub fn new_query_transaction_blocks(address_type: AddressQueryType) -> Self {
+        let query_transactions = QueryTransactionBlocks { address_type };
         Self {
-            data: CommandData::QueryTransactions(query_transactions),
+            data: CommandData::QueryTransactionBlocks(query_transactions),
             ..Default::default()
         }
     }
@@ -129,7 +115,7 @@ pub enum CommandData {
     DryRun(DryRun),
     GetCheckpoints(GetCheckpoints),
     PaySui(PaySui),
-    QueryTransactions(QueryTransactions),
+    QueryTransactionBlocks(QueryTransactionBlocks),
 }
 
 impl Default for CommandData {
@@ -156,16 +142,24 @@ pub struct GetCheckpoints {
 pub struct PaySui {}
 
 #[derive(Clone, Default)]
-pub struct QueryTransactions {
-    pub address: Option<SuiAddress>,
-    pub address_type: Option<AddressType>,
-    pub from_file: Option<bool>,
+pub struct QueryTransactionBlocks {
+    pub address_type: AddressQueryType,
 }
 
-#[derive(Clone)]
-pub enum AddressType {
-    FromAddress,
-    ToAddress,
+#[derive(Clone, Parser)]
+pub enum AddressQueryType {
+    #[clap(name = "from")]
+    From,
+    #[clap(name = "to")]
+    To,
+    #[clap(name = "both")]
+    Both,
+}
+
+impl Default for AddressQueryType {
+    fn default() -> Self {
+        AddressQueryType::From
+    }
 }
 
 #[async_trait]
