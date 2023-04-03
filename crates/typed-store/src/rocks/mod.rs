@@ -39,7 +39,7 @@ use sui_macros::{fail_point, nondeterministic};
 // Write buffer size per RocksDB instance can be set via the env var below.
 // If the env var is not set, use the default value in MiB.
 const ENV_VAR_DB_WRITE_BUFFER_SIZE: &str = "MYSTEN_DB_WRITE_BUFFER_SIZE_MB";
-const DEFAULT_DB_WRITE_BUFFER_SIZE: usize = 512;
+const DEFAULT_DB_WRITE_BUFFER_SIZE: usize = 1024;
 
 // Write ahead log size per RocksDB instance can be set via the env var below.
 // If the env var is not set, use the default value in MiB.

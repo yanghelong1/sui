@@ -12,7 +12,8 @@ use sui_types::storage::ObjectStore;
 use typed_store::metrics::SamplingInterval;
 use typed_store::rocks::util::{empty_compaction_filter, reference_count_merge_operator};
 use typed_store::rocks::{
-    point_lookup_db_options, DBBatch, DBMap, DBOptions, MetricConf, ReadWriteOptions,
+    default_db_options, point_lookup_db_options, DBBatch, DBMap, DBOptions, MetricConf,
+    ReadWriteOptions,
 };
 use typed_store::traits::{Map, TableSummary, TypedStoreDebug};
 
@@ -381,7 +382,21 @@ fn owned_object_transaction_locks_table_default_config() -> DBOptions {
 }
 
 fn objects_table_default_config() -> DBOptions {
-    let mut db_options = point_lookup_db_options();
+    let mut db_options = default_db_options();
+    db_options.options.set_write_buffer_size(128 * 1024 * 1024);
+    db_options.options.set_min_write_buffer_number_to_merge(2);
+    db_options.options.set_max_write_buffer_number(6);
+    db_options
+        .options
+        .set_level_zero_file_num_compaction_trigger(2);
+    db_options
+        .options
+        .set_target_file_size_base(64 * 1024 * 1024);
+    db_options
+        .options
+        .set_max_bytes_for_level_base(512 * 1024 * 1024);
+    db_options.options.set_min_level_to_compress(2);
+    db_options.options.set_max_background_jobs(4);
     let mut block_options = BlockBasedOptions::default();
     // Configure a 64MiB block cache.
     block_options.set_block_cache(&Cache::new_lru_cache(5 * 1024 << 20).unwrap());
