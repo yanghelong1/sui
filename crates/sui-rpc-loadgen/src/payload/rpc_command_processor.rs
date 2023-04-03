@@ -31,8 +31,8 @@ use crate::payload::{
     Command, CommandData, DryRun, GetCheckpoints, Payload, ProcessPayload, Processor, SignerInfo,
 };
 
-pub(crate) const DEFAULT_GAS_BUDGET: u64 = 10_000;
-pub(crate) const DEFAULT_LARGE_GAS_BUDGET: u64 = 100_000_000;
+pub(crate) const DEFAULT_GAS_BUDGET: u64 = 5_000_000;
+pub(crate) const DEFAULT_LARGE_GAS_BUDGET: u64 = 1_000_000_000;
 pub(crate) const MAX_NUM_NEW_OBJECTS_IN_SINGLE_TRANSACTION: usize = 2000;
 
 #[derive(Clone)]
