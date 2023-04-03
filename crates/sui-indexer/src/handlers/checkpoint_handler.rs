@@ -273,7 +273,7 @@ where
                     .map(|(status, o)| {
                         Object::from(
                             checkpoint.epoch,
-                            Some(<u64>::from(checkpoint.sequence_number)),
+                            Some(checkpoint.sequence_number),
                             status,
                             o,
                         )
