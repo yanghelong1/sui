@@ -7,6 +7,7 @@ use jsonrpsee::rpc_params;
 use sui_json_rpc_types::{SuiTransactionBlockEffectsAPI, SuiTransactionBlockResponse};
 use sui_types::base_types::{ObjectID, SuiAddress};
 use sui_types::object::Owner;
+use sui_types::sui_serde::BigInt;
 use tracing::{debug, info};
 
 pub struct CoinMergeSplitTest;
@@ -32,7 +33,7 @@ impl TestCaseImpl for CoinMergeSplitTest {
 
         // Split
         info!("Testing coin split.");
-        let amounts = vec![1, (original_value - 2) / 2];
+        let amounts = vec![1.into(), ((original_value - 2) / 2).into()];
 
         let response =
             Self::split_coin(ctx, signer, *primary_coin.id(), amounts, *gas_obj.id()).await;
@@ -139,7 +140,7 @@ impl CoinMergeSplitTest {
         ctx: &TestContext,
         signer: SuiAddress,
         primary_coin: ObjectID,
-        amounts: Vec<u64>,
+        amounts: Vec<BigInt<u64>>,
         gas_obj_id: ObjectID,
     ) -> SuiTransactionBlockResponse {
         let gas_price = ctx.get_reference_gas_price().await;
