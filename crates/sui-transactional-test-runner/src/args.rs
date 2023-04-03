@@ -8,6 +8,7 @@ use move_command_line_common::{parser::Parser as MoveCLParser, values::ValueToke
 use move_compiler::shared::parse_u128;
 use move_core_types::identifier::Identifier;
 use move_core_types::value::{MoveStruct, MoveValue};
+use move_transactional_test_runner::tasks::SyntaxChoice;
 use sui_types::messages::{Argument, CallArg, ObjectArg};
 use sui_types::object::Owner;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
@@ -93,6 +94,18 @@ pub struct ProgrammableTransactionCommand {
 }
 
 #[derive(Debug, clap::Parser)]
+pub struct UpgradePackageCommand {
+    #[clap(long = "package")]
+    pub package: Option<String>,
+    #[clap(long = "upgrade-capability")]
+    pub upgrade_capability: u64,
+    #[clap(long = "gas-budget")]
+    pub gas_budget: Option<u64>,
+    #[clap(long = "syntax")]
+    pub syntax: Option<SyntaxChoice>,
+}
+
+#[derive(Debug, clap::Parser)]
 pub enum SuiSubcommand {
     #[clap(name = "view-object")]
     ViewObject(ViewObjectCommand),
@@ -102,6 +115,8 @@ pub enum SuiSubcommand {
     ConsensusCommitPrologue(ConsensusCommitPrologueCommand),
     #[clap(name = "programmable")]
     ProgrammableTransaction(ProgrammableTransactionCommand),
+    #[clap(name = "upgrade")]
+    UpgradePackage(UpgradePackageCommand),
 }
 
 #[derive(Debug)]

@@ -1,0 +1,8 @@
+processed 3 tasks
+
+task 1 'publish'. lines 6-10:
+created: object(104), object(105)
+mutated: object(103)
+
+task 2 'upgrade'. lines 12-17:
+Error: Transaction was not signed by the correct sender: Object 0x0110c03b915be243f094c942772477564034e7b5088e3a5bd5f370d4b96f1e7f is owned by account address 0xcc5ac70f1a73cf179b1b9d6f643f8753efe637306c3dab8ebbafabde6fc4f3d7, but given owner/signer address is 0x6bc4a03b5afd0d277ee3c78fcb729aae5f1d770b95a1eef6fcadc1374738307a
