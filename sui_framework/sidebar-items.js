@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_FRAMEWORK_PATH"],"fn":["build_move_package","legacy_test_cost","make_system_modules","make_system_objects","make_system_packages","system_package_ids"],"macro":["make_native"],"mod":["natives"],"struct":["MoveStdlib","MoveStdlibTest","SuiFramework","SuiFrameworkTest","SuiSystem","SuiSystemTest"],"trait":["SystemPackage"]};
